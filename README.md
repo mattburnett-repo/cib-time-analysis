@@ -35,10 +35,9 @@ Open the URL shown in the terminal (default: http://localhost:8080).
 
 You need a GitHub account with Codespaces enabled.
 
-1. Open https://github.com/mattburnett-repo/cib-time-analysis (sign in to GitHub).
-2. Click **Code → Codespaces → Create codespace on main** (it's the green 'Code' button, upper right). First launch can take a few minutes while it sets up.
-3. In the Codespace terminal, run: `./start.sh`
-4. If the app doesn’t open, use **Ports → 8080**.
+1. Click **Code → Codespaces → Create codespace on main** (it's the green 'Code' button, upper right). First launch can take a few minutes while it sets up.
+2. In the Codespace terminal, run: `./start.sh`
+3. If the app doesn’t open, use **Ports → 8080**.
 
 
 ## Datasets (`csv_data/`)
