@@ -34,3 +34,6 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# Over GitHub's 100 MB file limit — supply locally (see README)
+csv_data/data/truth_vax_2024-2025.csv
