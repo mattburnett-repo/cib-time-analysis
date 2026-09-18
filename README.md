@@ -29,6 +29,18 @@ This creates `.venv` and installs dependencies from `requirements.txt`.
 
 Open the URL shown in the terminal (default: http://localhost:8080).
 
+## Codespaces
+
+On GitHub: **Code → Codespaces → Create codespace on main**.
+
+The `.devcontainer` uses Python 3.12, runs `./setup.sh` on create, and forwards port **8080**. Then:
+
+```bash
+./start.sh
+```
+
+Open **Ports → 8080** in the browser.
+
 ## Datasets (`csv_data/`)
 
 The app expects CSV files under `csv_data/` (see `modules/timeseries_gui_config.py`).
