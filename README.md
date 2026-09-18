@@ -2,7 +2,7 @@
 
 Local NiceGUI app for building and inspecting user networks from posting-time data.
 
-This project is based on time analysis code authored by John Biddle. It is primarily UI enhancements, based on John's work.
+This project is based on time analysis code authored by [John Biddle](https://github.com/johnbiddle). It is primarily UI enhancements, based on John's work.
 
 ## Clone
 
@@ -31,15 +31,15 @@ Open the URL shown in the terminal (default: http://localhost:8080).
 
 ## Codespaces
 
-On GitHub: **Code → Codespaces → Create codespace on main**.
+**You can run the time analysis code in your browser, using GitHub Codespaces**
 
-The `.devcontainer` uses Python 3.12, runs `./setup.sh` on create, and forwards port **8080**. Then:
+You need a GitHub account with Codespaces enabled.
 
-```bash
-./start.sh
-```
+1. Open https://github.com/mattburnett-repo/cib-time-analysis (sign in to GitHub).
+2. Click **Code → Codespaces → Create codespace on main** (it's the green 'Code' button, upper right). First launch can take a few minutes while it sets up.
+3. In the Codespace terminal, run: `./start.sh`
+4. If the app doesn’t open, use **Ports → 8080**.
 
-Open **Ports → 8080** in the browser.
 
 ## Datasets (`csv_data/`)
 
