@@ -29,6 +29,19 @@ This creates `.venv` and installs dependencies from `requirements.txt`.
 
 Open the URL shown in the terminal (default: http://localhost:8080).
 
+## Datasets (`csv_data/`)
+
+The app expects CSV files under `csv_data/` (see `modules/timeseries_gui_config.py`).
+
+**Truth Social Vax is not in the GitHub repo.**  
+`csv_data/data/truth_vax_2024-2025.csv` is about **129 MB**, which exceeds GitHub’s **100 MB** per-file limit, so pushes that include it are rejected. Keep that file on your machine (or obtain it from the project maintainers / your data source) and place it at:
+
+```text
+csv_data/data/truth_vax_2024-2025.csv
+```
+
+Without it, the **Truth Social Vax** dataset option will fail when you try to build a graph. Bluesky and other smaller files may still be present in the repo depending on what was committed.
+
 ## Layout
 
 | Path                               | Role                                                       |
