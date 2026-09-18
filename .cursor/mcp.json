@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "nicegui-docs": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "mcpdoc",
+        "--with",
+        "mcp<2",
+        "mcpdoc",
+        "--urls",
+        "NiceGUI:${workspaceFolder}/.cursor/vendor/nicegui/llms.txt",
+        "--allowed-domains",
+        "nicegui.io"
+      ]
+    },
+    "pandas": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/devantage/mcp-pandas",
+        "mcp-pandas"
+      ]
+    }
+  }
+}
