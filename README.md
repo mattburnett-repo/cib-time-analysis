@@ -1,0 +1,51 @@
+# CIB Time Analysis
+
+Local NiceGUI app for building and inspecting user networks from posting-time data.
+
+This project is based on time analysis code authored by John Biddle. It is primarily UI enhancements, based on John's work.
+
+## Clone
+
+```bash
+git clone https://github.com/mattburnett-repo/cib-time-analysis.git
+cd CIB_TimeAnalysis
+```
+
+## First-time setup
+
+Requires Python 3. Then:
+
+```bash
+./setup.sh
+```
+
+This creates `.venv` and installs dependencies from `requirements.txt`.
+
+## Start
+
+```bash
+./start.sh
+```
+
+Open the URL shown in the terminal (default: http://localhost:8080).
+
+## Layout
+
+| Path                               | Role                                                       |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `app/time_gui_main.py`             | NiceGUI page: builds widgets and binds `StepperController` |
+| `app/time_analysis.py`             | Core similarity / graph-building algorithms                |
+| `modules/my_graph.py`              | Session graph cache (`MyGraph`) and weight cutting         |
+| `modules/chart_utils.py`           | ECharts defaults, click JS, edge/node payload helpers      |
+| `modules/stepper.py`               | Step navigation and panel sync (`StepperController`)       |
+| `modules/session.py`               | Typed `StepperContext` passed into `bind()`                |
+| `modules/timeseries_gui_config.py` | Dataset / method labels and CSV column maps                |
+| `tests/`                           | Pytest suite (`./runtests.sh`)                             |
+
+## Tests
+
+```bash
+./runtests.sh
+```
+
+Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), and entrypoint smoke checks.

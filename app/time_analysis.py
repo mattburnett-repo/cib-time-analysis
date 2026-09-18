@@ -292,3 +292,11 @@ def dynamic_time_window(
     end_time = time.time()
     print(f"Time taken: {end_time - start_time:.2f} seconds")
     return D
+
+
+METHODS = [
+    sliding_window,
+    ado_window,
+    time_overlap,
+    dynamic_time_window,
+]
