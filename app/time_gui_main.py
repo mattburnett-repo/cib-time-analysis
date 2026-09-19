@@ -39,10 +39,10 @@ def main_page():
         ).classes("text-subtitle1 text-grey-8")
 
         # Step panels are created here (see modules/stepper_steps.py).
-        with ui.stepper().props("animated header-nav").classes("w-full") as stepper:
+        with ui.stepper().props("animated").classes("w-full") as stepper:
             panels = build_stepper_panels(stepper, stepper_controller, graph)
 
-        # Future steps stay disabled until prior steps succeed; header-nav then allows return.
+        # Future steps stay disabled until prior steps succeed.
         panels.build.step.disable()
         panels.weights.step.disable()
         panels.explore.step.disable()
@@ -51,7 +51,7 @@ def main_page():
     # Hand off typed page context after the UI exists.
     # Buttons already call stepper_controller methods; bind() applies StepperContext
     # (MyGraph, selection/chart dicts, step widgets, form controls) and registers
-    # on_stepper_change so tab/header navigation can resync each step's panel.
+    # on_stepper_change so step changes can resync each step's panel.
 
     # In short: the page builds the screen first, then hands the controller everything
     # it needs so clicks and step changes can update the right widgets and data.

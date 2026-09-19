@@ -213,8 +213,7 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
             ).props("unelevated color=primary")
             with create_button:
                 ui.tooltip(
-                    "Run the selected analysis. Large datasets can take a while; "
-                    "identical settings are cached for this session."
+                    "Run the selected analysis. Large datasets can take a while."
                 )
         ui.timer(
             0.1,

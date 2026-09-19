@@ -37,21 +37,9 @@ class MyGraph:
         self.graph = None
         self.current_set = None
         self.cut_graph = None
-        self.saved_graphs = {}
         self.managed_progress_value = Manager().Value("d", 0.0)
 
     async def create_graph(self, method_num, dataset_num, t_step=300, win_size=2):
-        if (
-            method_num,
-            dataset_num,
-            t_step,
-            win_size,
-        ) in self.saved_graphs and self.saved_graphs[
-            (method_num, dataset_num, t_step, win_size)
-        ] is not None:
-            self.graph = self.saved_graphs[(method_num, dataset_num, t_step, win_size)]
-            self.current_set = (method_num, dataset_num, t_step, win_size)
-            return
         method = METHODS[method_num]
         dataset = DATASETS[dataset_num]
 
@@ -59,7 +47,6 @@ class MyGraph:
             method, dataset, self.managed_progress_value, win_size, t_step
         )
         self.current_set = (method_num, dataset_num, t_step, win_size)
-        self.saved_graphs[(method_num, dataset_num, t_step, win_size)] = self.graph
 
     def create_Egraph(self, num_top=20):
         if self.graph is None:
