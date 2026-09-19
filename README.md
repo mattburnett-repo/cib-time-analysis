@@ -51,7 +51,7 @@ The app expects CSV files under `csv_data/` (see `modules/timeseries_gui_config.
 csv_data/data/truth_vax_2024-2025.csv
 ```
 
-Without it, the **Truth Social Vax** dataset option will fail when you try to build a graph. Bluesky and other smaller files may still be present in the repo depending on what was committed.
+Without it, the **Truth Social Vax** dataset option will fail when you try to build a graph.
 
 ## Layout
 

@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import networkx as nx
 import numpy as np
@@ -118,6 +118,27 @@ def test_users_from_edge_payload_ignores_nodes_and_junk():
     assert users_from_edge_payload({"dataType": "node", "name": "alice"}) is None
     assert users_from_edge_payload(None) is None
     assert users_from_edge_payload("not-a-payload") is None
+
+
+def test_mygraph_has_no_saved_graphs_cache(my_graph):
+    assert not hasattr(my_graph, "saved_graphs")
+
+
+@pytest.mark.asyncio
+async def test_mygraph_create_graph_always_rebuilds(my_graph):
+    first = _weighted_graph()
+    second = nx.Graph()
+    second.add_edge("x", "y", norm_weight=9.0)
+
+    with patch("modules.my_graph.run.cpu_bound", new_callable=AsyncMock) as cpu_bound:
+        cpu_bound.side_effect = [first, second]
+        await my_graph.create_graph(0, 0, t_step=300, win_size=2)
+        assert my_graph.graph is first
+        assert my_graph.current_set == (0, 0, 300, 2)
+
+        await my_graph.create_graph(0, 0, t_step=300, win_size=2)
+        assert my_graph.graph is second
+        assert cpu_bound.await_count == 2
 
 
 def test_mygraph_create_egraph_and_weights_without_graph(my_graph):

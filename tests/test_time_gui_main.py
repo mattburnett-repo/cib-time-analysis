@@ -1,5 +1,6 @@
 """Smoke checks for the NiceGUI entrypoint (no browser / full page build)."""
 
+import inspect
 from dataclasses import fields
 
 from app.time_gui_main import _chrome_devtools_probe, main_page
@@ -14,6 +15,12 @@ def test_chrome_devtools_probe_route_handler():
 
 def test_main_page_is_registered_callable():
     assert callable(main_page)
+
+
+def test_stepper_is_not_header_navigable():
+    source = inspect.getsource(main_page)
+    assert "header-nav" not in source
+    assert 'props("animated")' in source
 
 
 def test_stepper_context_field_count_is_stable():
