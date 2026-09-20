@@ -77,3 +77,4 @@ Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), an
 ## To do
 
 - Bring this project's code structure / organization in line with the existing analyzer / test modules.
+- Use Kartik's CSS abstractions instead of literal Tailwind classes.
