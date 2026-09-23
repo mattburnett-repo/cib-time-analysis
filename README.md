@@ -1,4 +1,4 @@
-# CIB Time Analysis
+# CIBMT Time Analysis
 
 Local NiceGUI app for building and inspecting user networks from posting-time data.
 
