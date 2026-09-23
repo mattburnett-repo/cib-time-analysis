@@ -74,7 +74,9 @@ Without it, the **Truth Social Vax** dataset option will fail when you try to bu
 
 Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), and entrypoint smoke checks.
 
-## To do
+## To Do
 
-- Bring this project's code structure / organization in line with the existing analyzer / test modules.
+- Make sure that different tests produce expected results. Right now, all tests appear to produce the same result(s).
+- Decide how to handle graphs with multiple edges. Right now the app only allows a 1:1 edge. We need to figure out how to handle N:1 / N:M graphs.
+- Bring this repo's code structure / organization in line with the existing analyzer / test modules in the CIBMT repo.
 - Use Kartik's CSS abstractions instead of literal Tailwind classes.
