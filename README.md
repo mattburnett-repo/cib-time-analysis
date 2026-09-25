@@ -31,7 +31,7 @@ Open the URL shown in the terminal (default: http://localhost:8080).
 
 ## Codespaces
 
-**You can run the time analysis code in your browser, using GitHub Codespaces**
+**You can run the time analysis code in your browser, using GitHub Codespaces** You can skip all of the above clone / setup ceremony by running the code this way.
 
 You need a GitHub account with Codespaces enabled.
 
