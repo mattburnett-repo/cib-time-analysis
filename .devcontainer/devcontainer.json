@@ -1,5 +1,5 @@
 {
-  "name": "CIB Time Analysis",
+  "name": "CIBMT Time Analysis",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "forwardPorts": [8080],
   "portsAttributes": {

@@ -13,6 +13,11 @@ from modules.timeseries_gui_config import (
     DATASET_OPTIONS,
     METHOD_HELP,
     METHOD_OPTIONS,
+    STEP_BUILD,
+    STEP_CONFIGURE,
+    STEP_EXPLORE,
+    STEP_INSPECT,
+    STEP_WEIGHTS,
 )
 
 
@@ -73,8 +78,41 @@ class StepperPanels:
     inspect: InspectStep
 
 
+def _build_option_buttons(
+    options: dict[int, str],
+    help_by_index: dict[int, str],
+    toggle: SimpleNamespace,
+) -> None:
+    """Mutually exclusive option buttons that write the selected index into toggle.value."""
+    buttons: dict[int, Any] = {}
+
+    def select(index: int) -> None:
+        toggle.value = index
+        for i, button in buttons.items():
+            if i == index:
+                button.props(remove="outline")
+                button.props("unelevated color=primary no-caps")
+            else:
+                button.props(remove="unelevated")
+                button.props("outline color=primary no-caps")
+
+    with ui.row().classes("flex-wrap gap-2 q-mt-xs"):
+        for idx, label in options.items():
+            button = ui.button(
+                label,
+                on_click=lambda i=idx: select(i),
+            ).props(
+                "unelevated color=primary no-caps"
+                if idx == 0
+                else "outline color=primary no-caps"
+            )
+            with button:
+                ui.tooltip(help_by_index[idx])
+            buttons[idx] = button
+
+
 def build_configure_step(stepper_controller: Any) -> ConfigureStep:
-    with ui.step("Configure", icon="tune") as step_configure:
+    with ui.step(STEP_CONFIGURE, icon="tune") as step_configure:
         ui.label("Choose the dataset and how similarity is measured.").classes(
             "text-body2 text-grey-8 q-mb-sm"
         )
@@ -83,70 +121,12 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
             toggle_analysis = SimpleNamespace(value=0)
 
             with ui.card_section():
-                with ui.row().classes("items-center gap-2"):
-                    ui.label("Dataset").classes("text-subtitle2")
-                    with ui.icon("info", size="xs").classes("text-grey-6 cursor-help"):
-                        ui.tooltip(
-                            "Hover a dataset button for what it contains and relative size."
-                        )
-                dataset_buttons = {}
-
-                def select_dataset(index: int) -> None:
-                    toggle_data.value = index
-                    for i, button in dataset_buttons.items():
-                        if i == index:
-                            button.props(remove="outline")
-                            button.props("unelevated color=primary no-caps")
-                        else:
-                            button.props(remove="unelevated")
-                            button.props("outline color=primary no-caps")
-
-                with ui.row().classes("flex-wrap gap-2 q-mt-xs"):
-                    for idx, label in DATASET_OPTIONS.items():
-                        button = ui.button(
-                            label,
-                            on_click=lambda i=idx: select_dataset(i),
-                        ).props(
-                            "unelevated color=primary no-caps"
-                            if idx == 0
-                            else "outline color=primary no-caps"
-                        )
-                        with button:
-                            ui.tooltip(DATASET_HELP[idx])
-                        dataset_buttons[idx] = button
+                ui.label("Dataset").classes("text-subtitle2")
+                _build_option_buttons(DATASET_OPTIONS, DATASET_HELP, toggle_data)
 
             with ui.card_section():
-                with ui.row().classes("items-center gap-2"):
-                    ui.label("Analysis method").classes("text-subtitle2")
-                    with ui.icon("info", size="xs").classes("text-grey-6 cursor-help"):
-                        ui.tooltip(
-                            "Hover a method button for a short explanation of how it scores user links."
-                        )
-                method_buttons = {}
-
-                def select_method(index: int) -> None:
-                    toggle_analysis.value = index
-                    for i, button in method_buttons.items():
-                        if i == index:
-                            button.props(remove="outline")
-                            button.props("unelevated color=primary no-caps")
-                        else:
-                            button.props(remove="unelevated")
-                            button.props("outline color=primary no-caps")
-
-                with ui.row().classes("flex-wrap gap-2 q-mt-xs"):
-                    for idx, label in METHOD_OPTIONS.items():
-                        button = ui.button(
-                            label,
-                            on_click=lambda i=idx: select_method(i),
-                        ).props(
-                            "unelevated color=primary no-caps"
-                            if idx == 0
-                            else "outline color=primary no-caps"
-                        )
-                        with button:
-                            ui.tooltip(METHOD_HELP[idx])
-                        method_buttons[idx] = button
+                ui.label("Analysis method").classes("text-subtitle2")
+                _build_option_buttons(METHOD_OPTIONS, METHOD_HELP, toggle_analysis)
 
             with ui.card_section():
                 ui.label("Timing parameters").classes("text-subtitle2")
@@ -178,7 +158,7 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
                         )
         with ui.stepper_navigation().classes("w-full justify-end"):
             next_configure = ui.button(
-                "Next: Build graph", on_click=stepper_controller.go_to_build
+                f"Next: {STEP_BUILD}", on_click=stepper_controller.go_to_build
             ).props("unelevated")
             with next_configure:
                 ui.tooltip("Continue to build the user network with these settings.")
@@ -193,7 +173,7 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
 
 
 def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> BuildStep:
-    with ui.step("Build graph", icon="hub") as step_build:
+    with ui.step(STEP_BUILD, icon="hub") as step_build:
         with ui.column().classes("w-full items-center gap-2"):
             ui.label(
                 "Run the analysis. This can take a while on larger datasets."
@@ -222,7 +202,7 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
             next_from_build = ui.button(
-                "Next: Weight distribution",
+                f"Next: {STEP_WEIGHTS}",
                 on_click=stepper_controller.go_to_weights,
             ).props("unelevated")
             with next_from_build:
@@ -242,7 +222,7 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
 
 
 def build_weights_step(stepper: Any, stepper_controller: Any) -> WeightsStep:
-    with ui.step("Weight distribution", icon="bar_chart") as step_weights:
+    with ui.step(STEP_WEIGHTS, icon="bar_chart") as step_weights:
         ui.label(
             "Review how edge weights are distributed before browsing the network."
         ).classes("text-body2 text-grey-8 q-mb-sm")
@@ -252,7 +232,7 @@ def build_weights_step(stepper: Any, stepper_controller: Any) -> WeightsStep:
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
             ui.button(
-                "Next: Explore network",
+                f"Next: {STEP_EXPLORE}",
                 on_click=stepper_controller.go_to_explore,
             ).props("unelevated").tooltip(
                 "Open the network graph and choose a user link to compare."
@@ -262,7 +242,7 @@ def build_weights_step(stepper: Any, stepper_controller: Any) -> WeightsStep:
 
 
 def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
-    with ui.step("Explore network", icon="account_tree") as step_explore:
+    with ui.step(STEP_EXPLORE, icon="account_tree") as step_explore:
         ui.label(
             "Pick a link between two users. Next you will compare their "
             "posting timelines and read their posts together."
@@ -305,7 +285,7 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                 ).classes("w-full")
                 with edge_select:
                     ui.tooltip(
-                        "Pick two linked users from the list. This is the most reliable way to open Compare users."
+                        f"Pick two linked users from the list. This is the most reliable way to open {STEP_INSPECT}."
                     )
                 edge_select.disable()
                 edge_select.on_value_change(
@@ -338,7 +318,7 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
 
 
 def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
-    with ui.step("Compare users", icon="compare_arrows") as step_inspect:
+    with ui.step(STEP_INSPECT, icon="compare_arrows") as step_inspect:
         ui.label(
             "Side-by-side posting activity and an interleaved timeline of posts "
             "for the two users you selected."
@@ -368,7 +348,7 @@ def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
                 "Start over",
                 on_click=stepper_controller.start_over,
             ).props("flat").tooltip(
-                "Return to Configure. A completed build stays available in this session."
+                f"Return to {STEP_CONFIGURE}. A completed build stays available in this session."
             )
 
     return InspectStep(

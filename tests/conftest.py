@@ -2,6 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from modules.timeseries_gui_config import DatasetSpec
+
 
 @pytest.fixture
 def progress():
@@ -28,7 +30,7 @@ def sample_csv(tmp_path):
         ),
         encoding="utf-8",
     )
-    return (
+    return DatasetSpec(
         str(path),
         "created_at",
         "account.username",

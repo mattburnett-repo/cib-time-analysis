@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 
 from modules.chart_utils import (
-    _NETWORK_CLICK_JS,
-    ePlotDefaultOptions,
-    plot_subpgraph_egraph,
+    ECHART_GRAPH_DEFAULTS,
+    NETWORK_CLICK_JS,
+    plot_subgraph_echart,
     resolve_node_ref,
     users_from_edge_payload,
 )
@@ -56,8 +56,8 @@ def test_cut_graph_by_weight_keeps_all_when_num_top_exceeds_edges():
     assert cut.number_of_edges() == original.number_of_edges()
 
 
-def test_plot_subgraph_egraph_series_shape():
-    series = plot_subpgraph_egraph(_weighted_graph())
+def test_plot_subgraph_echart_series_shape():
+    series = plot_subgraph_echart(_weighted_graph())
 
     assert len(series) == 1
     assert series[0]["type"] == "graph"
@@ -68,12 +68,12 @@ def test_plot_subgraph_egraph_series_shape():
     assert all(">" in link["name"] for link in series[0]["links"])
 
 
-def test_eplot_defaults_favor_edge_clicks():
-    assert ePlotDefaultOptions["roam"] == "scale"
-    assert ePlotDefaultOptions["lineStyle"]["width"] >= 8
-    assert "source" in _NETWORK_CLICK_JS
-    assert "target" in _NETWORK_CLICK_JS
-    assert "dataType" in _NETWORK_CLICK_JS
+def test_echart_defaults_favor_edge_clicks():
+    assert ECHART_GRAPH_DEFAULTS["roam"] == "scale"
+    assert ECHART_GRAPH_DEFAULTS["lineStyle"]["width"] >= 8
+    assert "source" in NETWORK_CLICK_JS
+    assert "target" in NETWORK_CLICK_JS
+    assert "dataType" in NETWORK_CLICK_JS
 
 
 def test_resolve_node_ref_string_and_index():
@@ -120,8 +120,28 @@ def test_users_from_edge_payload_ignores_nodes_and_junk():
     assert users_from_edge_payload("not-a-payload") is None
 
 
-def test_mygraph_has_no_saved_graphs_cache(my_graph):
-    assert not hasattr(my_graph, "saved_graphs")
+@pytest.mark.asyncio
+async def test_mygraph_csv_cache_loads_once_and_uses_step_size(my_graph):
+    from app.time_analysis import get_tvec
+    from modules.timeseries_gui_config import DATASETS
+
+    my_graph.graph = _weighted_graph()
+    my_graph.current_set = (0, 0, 300, 2)
+    csv_df = object()
+    with patch("modules.my_graph.run.io_bound", new_callable=AsyncMock) as io_bound:
+        io_bound.return_value = (csv_df, None)
+        dataset, df1 = await my_graph._ensure_csv()
+        _dataset2, df2 = await my_graph._ensure_csv()
+        assert dataset is DATASETS[0]
+        assert df1 is df2 is csv_df
+        assert io_bound.await_count == 1
+
+        io_bound.return_value = (np.array([1.0]), 2)
+        result = await my_graph.get_user_tvec("a")
+        assert result[1] == 2
+        assert io_bound.await_count == 2
+        assert io_bound.await_args.args[0] is get_tvec
+        assert io_bound.await_args.args[4] == 300
 
 
 @pytest.mark.asyncio
@@ -142,14 +162,14 @@ async def test_mygraph_create_graph_always_rebuilds(my_graph):
 
 
 def test_mygraph_create_egraph_and_weights_without_graph(my_graph):
-    assert my_graph.create_Egraph() is None
+    assert my_graph.create_egraph() is None
     assert my_graph.get_graph_weights() is None
 
 
 def test_mygraph_create_egraph_and_weights_with_graph(my_graph):
     my_graph.graph = _weighted_graph()
 
-    series = my_graph.create_Egraph(num_top=2)
+    series = my_graph.create_egraph(num_top=2)
     weights = my_graph.get_graph_weights()
 
     assert series is not None

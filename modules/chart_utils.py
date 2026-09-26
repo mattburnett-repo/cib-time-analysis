@@ -2,7 +2,7 @@
 
 import networkx as nx
 
-ePlotDefaultOptions = {
+ECHART_GRAPH_DEFAULTS = {
     "type": "graph",
     "layout": "force",
     "symbolSize": 28,
@@ -21,7 +21,7 @@ ePlotDefaultOptions = {
 # Browser-side handler for ECharts graph clicks (passed to NiceGUI's js_handler).
 # The raw chart:click payload is huge and not JSON-serializable to Python, so this
 # strips it down and emit()s only what we need: edge source/target or node name.
-_NETWORK_CLICK_JS = """
+NETWORK_CLICK_JS = """
 (evt) => {
     if (!evt || evt.componentType !== 'series') return;
     if (evt.dataType === 'edge') {
@@ -78,7 +78,7 @@ def users_from_edge_payload(args, nodes: list | None = None) -> tuple[str, str] 
     return None
 
 
-def plot_subpgraph_egraph(G: nx.Graph):
+def plot_subgraph_echart(G: nx.Graph):
     nodes = list(G.nodes())
     data = [{"name": node, "id": node, "value": 1} for node in nodes]
     links = []
@@ -92,5 +92,5 @@ def plot_subpgraph_egraph(G: nx.Graph):
                 "value": float(weight),
             }
         )
-    series = [dict(ePlotDefaultOptions, data=data, links=links)]
+    series = [dict(ECHART_GRAPH_DEFAULTS, data=data, links=links)]
     return series

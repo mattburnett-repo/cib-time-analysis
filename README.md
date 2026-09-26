@@ -61,7 +61,10 @@ Without it, the **Truth Social Vax** dataset option will fail when you try to bu
 | `app/time_analysis.py`             | Core similarity / graph-building algorithms                |
 | `modules/my_graph.py`              | Session graph holder (`MyGraph`) and weight cutting        |
 | `modules/chart_utils.py`           | ECharts defaults, click JS, edge/node payload helpers      |
-| `modules/stepper.py`               | Step navigation and panel sync (`StepperController`)       |
+| `modules/stepper.py`               | `StepperController` facade (nav / explore / compare mixins) |
+| `modules/stepper_nav.py`           | Configure→Build navigation and unlock rules                |
+| `modules/stepper_explore.py`       | Weights + Explore charts and edge selection                |
+| `modules/stepper_compare.py`       | Compare-users loading                                      |
 | `modules/session.py`               | Typed `StepperContext` passed into `bind()`                |
 | `modules/timeseries_gui_config.py` | Dataset / method labels and CSV column maps                |
 | `tests/`                           | Pytest suite (`./runtests.sh`)                             |

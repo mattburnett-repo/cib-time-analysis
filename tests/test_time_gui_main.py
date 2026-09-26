@@ -23,10 +23,15 @@ def test_stepper_is_not_header_navigable():
     assert 'props("animated")' in source
 
 
-def test_stepper_context_field_count_is_stable():
-    # Guards against silent bind() breakage when widgets are added/removed.
+def test_stepper_context_keeps_panels_nested():
+    # Guards against silently re-flattening widgets into bind() fields.
     names = {field.name for field in fields(StepperContext)}
-    assert "graph" in names
-    assert "stepper" in names
-    assert "scroll_container" in names
-    assert len(names) == 32
+    assert names == {
+        "graph",
+        "selected_edge",
+        "network_chart",
+        "compare_chart",
+        "compare_load_id",
+        "stepper",
+        "panels",
+    }

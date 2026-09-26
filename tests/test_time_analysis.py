@@ -10,12 +10,14 @@ from modules.timeseries_gui_config import (
     DATASETS,
     METHOD_HELP,
     METHOD_OPTIONS,
+    DatasetSpec,
 )
 
 
 def test_gui_config_keys_align_with_datasets_and_methods():
     assert len(DATASETS) == len(DATASET_OPTIONS) == len(DATASET_HELP)
     assert set(DATASET_OPTIONS) == set(DATASET_HELP) == set(range(len(DATASETS)))
+    assert all(isinstance(dataset, DatasetSpec) for dataset in DATASETS)
     assert len(METHODS) == len(METHOD_OPTIONS) == len(METHOD_HELP)
     assert set(METHOD_OPTIONS) == set(METHOD_HELP) == set(range(len(METHODS)))
     assert METHODS == [

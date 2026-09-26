@@ -1,14 +1,31 @@
-# DATASETS contains tuples of (csv_name, time_col_name, user_col_name, content_col_name)
-# for each dataset.
-DATASETS = [
-    ("csv_data/data/bsky_vax_2024.csv", "createdAt", "authorProfile.handle", "text"),
-    (
+from __future__ import annotations
+
+from typing import NamedTuple
+
+# DATASETS: path + column names for each supported CSV.
+
+
+class DatasetSpec(NamedTuple):
+    csv_name: str
+    time_col_name: str
+    user_col_name: str
+    content_col_name: str
+
+
+DATASETS: list[DatasetSpec] = [
+    DatasetSpec(
+        "csv_data/data/bsky_vax_2024.csv",
+        "createdAt",
+        "authorProfile.handle",
+        "text",
+    ),
+    DatasetSpec(
         "csv_data/data/truth_vax_2024-2025.csv",
         "created_at",
         "account.username",
         "content_cleaned",
     ),
-    (
+    DatasetSpec(
         "csv_data/24010 Confirmed Russia Troll Tweets/toprowsremoved - confirmed_russia_troll_tweets.csv",
         "Date tweet sent",
         "Twitter screenname",
@@ -41,3 +58,24 @@ METHOD_HELP = {
     2: "Score user pairs by how much their active posting periods overlap after smoothing.",
     3: "DTW: align posting-time patterns even if they are shifted or stretched. Often the slowest method.",
 }
+
+# NiceGUI stepper values — must match ui.step(...) labels.
+STEP_CONFIGURE = "Configure"
+STEP_BUILD = "Build graph"
+STEP_WEIGHTS = "Weight distribution"
+STEP_EXPLORE = "Explore network"
+STEP_INSPECT = "Compare users"
+
+# Delay before rebuilding charts so the stepper panel has a real layout size.
+STEP_SYNC_DELAY = 0.15
+
+TOOLTIP_CSS = """
+.q-tooltip {
+    font-size: 1rem !important;
+    line-height: 1.45 !important;
+    max-width: 28rem;
+    padding: 0.55rem 0.8rem !important;
+}
+"""
+
+APP_TITLE = "CIBMT Time Analysis"
