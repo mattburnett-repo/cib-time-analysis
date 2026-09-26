@@ -56,6 +56,7 @@ class StepperNavMixin:
         build = self.panels.build
         cfg = self.panels.configure
         if self.graph.graph is not None:
+            build.intro_label.visible = False
             build.progress.visible = False
             pending = (
                 cfg.toggle_analysis.value,
@@ -65,15 +66,18 @@ class StepperNavMixin:
             )
             if self.graph.current_set == pending:
                 build.status_label.set_text("Done. Ready to view results.")
+                build.create_button.disable()
             else:
                 build.status_label.set_text(
                     "Graph ready. Build again if you changed settings."
                 )
-            build.create_button.enable()
+                build.create_button.enable()
             build.next_from_build.enable()
             self.unlock_after_build()
         else:
+            build.intro_label.visible = True
             build.status_label.set_text("Ready when you are.")
+            build.create_button.enable()
             build.next_from_build.disable()
 
     def go_to_build(self):
@@ -173,9 +177,9 @@ class StepperNavMixin:
             cfg.win_size.value,
         )
         build.progress.visible = False
+        build.intro_label.visible = False
         build.status_label.set_text("Done. Ready to view results.")
 
         self.panels.explore.slider.enable()
-        build.create_button.enable()
         build.next_from_build.enable()
         self.unlock_after_build()

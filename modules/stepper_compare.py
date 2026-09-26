@@ -66,18 +66,12 @@ class StepperCompareMixin:
                 return
 
             options = {
-                "title": {
-                    "text": f"Activity over time: {user0} vs {user1}",
-                    "left": "center",
-                    "top": 4,
-                    "padding": [0, 0, 10, 0],
-                },
                 "tooltip": {"trigger": "axis"},
-                "legend": {"data": [user0, user1], "top": 36},
+                "legend": {"data": [user0, user1], "top": 8},
                 "grid": {
                     "left": "2%",
                     "right": "2%",
-                    "top": 72,
+                    "top": 40,
                     "bottom": 40,
                     "containLabel": True,
                 },
@@ -97,7 +91,7 @@ class StepperCompareMixin:
                 chart = (
                     ui.echart(options)
                     .classes("w-full")
-                    .style("display:block; width:100%; min-width:100%; height:360px;")
+                    .style("display:block; width:100%; min-width:100%; height:280px;")
                 )
                 self.compare_chart["chart"] = chart
             self.schedule_chart_resize(chart)

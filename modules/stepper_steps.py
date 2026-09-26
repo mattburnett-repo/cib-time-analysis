@@ -33,6 +33,7 @@ class ConfigureStep:
 @dataclass
 class BuildStep:
     step: Any
+    intro_label: Any
     config_summary: Any
     progress: Any
     status_label: Any
@@ -63,6 +64,7 @@ class InspectStep:
     edge_meta: Any
     compare_loading: Any
     compare_loading_label: Any
+    activity_expansion: Any
     compare_chart_slot: Any
     scroll_container: Any
 
@@ -175,7 +177,7 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
 def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> BuildStep:
     with ui.step(STEP_BUILD, icon="hub") as step_build:
         with ui.column().classes("w-full items-center gap-2"):
-            ui.label(
+            intro_label = ui.label(
                 "Run the analysis. This can take a while on larger datasets."
             ).classes("text-body2 text-grey-8 text-center")
             config_summary = ui.label("").classes("text-body2 text-center")
@@ -213,6 +215,7 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
 
     return BuildStep(
         step=step_build,
+        intro_label=intro_label,
         config_summary=config_summary,
         progress=progress,
         status_label=status_label,
@@ -319,10 +322,6 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
 
 def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
     with ui.step(STEP_INSPECT, icon="compare_arrows") as step_inspect:
-        ui.label(
-            "Side-by-side posting activity and an interleaved timeline of posts "
-            "for the two users you selected."
-        ).classes("text-body2 text-grey-8 q-mb-sm")
         with ui.card().classes("w-full"):
             with ui.card_section().classes("w-full"):
                 edge_title = ui.label("No edge selected yet.").classes(
@@ -337,11 +336,32 @@ def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
                         "text-body2 text-grey-8"
                     )
                 compare_loading.visible = False
-            with ui.card_section().classes("w-full"):
-                compare_chart_slot = ui.element("div").classes("w-full")
-            with ui.card_section().classes("w-full"):
-                ui.label("Interleaved posts").classes("text-subtitle2")
-                scroll_container = ui.scroll_area().classes("w-full h-80")
+
+            def _resize_activity_chart(e) -> None:
+                if not e.value:
+                    return
+                chart_holder = getattr(stepper_controller, "compare_chart", None)
+                chart = chart_holder.get("chart") if chart_holder else None
+                if chart is not None:
+                    stepper_controller.schedule_chart_resize(chart)
+
+            with ui.card_section().classes("w-full q-pt-none"):
+                with ui.expansion(
+                    "Activity over time",
+                    icon="show_chart",
+                    group="compare",
+                    value=True,
+                    on_value_change=_resize_activity_chart,
+                ).classes("w-full") as activity_expansion:
+                    compare_chart_slot = ui.element("div").classes("w-full")
+                with ui.expansion(
+                    "Interleaved posts",
+                    icon="forum",
+                    group="compare",
+                    value=False,
+                ).classes("w-full"):
+                    scroll_container = ui.scroll_area().classes("w-full h-80")
+
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
             ui.button(
@@ -357,6 +377,7 @@ def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
         edge_meta=edge_meta,
         compare_loading=compare_loading,
         compare_loading_label=compare_loading_label,
+        activity_expansion=activity_expansion,
         compare_chart_slot=compare_chart_slot,
         scroll_container=scroll_container,
     )

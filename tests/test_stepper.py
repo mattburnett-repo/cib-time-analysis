@@ -55,6 +55,7 @@ def _panels():
         ),
         build=BuildStep(
             step=_widget(),
+            intro_label=_widget(visible=True),
             config_summary=_widget(),
             progress=_widget(visible=False),
             status_label=_widget(),
@@ -76,6 +77,7 @@ def _panels():
             edge_meta=_widget(),
             compare_loading=_widget(visible=False),
             compare_loading_label=_widget(),
+            activity_expansion=_widget(value=True),
             compare_chart_slot=_widget(),
             scroll_container=_widget(),
         ),
@@ -144,6 +146,7 @@ def test_sync_build_step_ui_with_matching_graph(controller):
     controller.panels.build.status_label.set_text.assert_called_with(
         "Done. Ready to view results."
     )
+    controller.panels.build.create_button.disable.assert_called()
     controller.panels.build.next_from_build.enable.assert_called()
     controller.panels.build.step.enable.assert_called()
     controller.panels.weights.step.enable.assert_called()
@@ -156,6 +159,7 @@ def test_sync_build_step_ui_with_stale_settings(controller):
     controller.panels.build.status_label.set_text.assert_called_with(
         "Graph ready. Build again if you changed settings."
     )
+    controller.panels.build.create_button.enable.assert_called()
 
 
 @patch("modules.stepper_nav.ui.timer")
