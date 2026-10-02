@@ -103,6 +103,13 @@ class StepperCompareMixin:
             items = await self.graph.get_overlapping_content(user0, user1)
             if load_id != self.compare_load_id["n"]:
                 return
+            if items is not None:
+                overlap0 = sum(1 for user, _content, _time in items if user == user0)
+                overlap1 = sum(1 for user, _content, _time in items if user == user1)
+                inspect.edge_meta.set_text(
+                    f"{user0}: {num_posts0} posts ({overlap0} overlapping) · "
+                    f"{user1}: {num_posts1} posts ({overlap1} overlapping)"
+                )
             inspect.scroll_container.clear()
             with inspect.scroll_container:
                 if items is None:

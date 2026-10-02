@@ -302,10 +302,9 @@ async def test_load_edge_inspection_success(
     await controller.load_edge_inspection("alice", "bob")
 
     controller.panels.inspect.edge_title.set_text.assert_any_call("alice  ↔  bob")
-    assert (
-        "alice: 2 posts"
-        in controller.panels.inspect.edge_meta.set_text.call_args_list[-1].args[0]
-    )
+    meta = controller.panels.inspect.edge_meta.set_text.call_args_list[-1].args[0]
+    assert "alice: 2 posts (1 overlapping)" in meta
+    assert "bob: 2 posts (1 overlapping)" in meta
     assert controller.compare_chart["chart"] is chart
     assert controller.panels.inspect.compare_loading.visible is False
     mock_chat.assert_called()
