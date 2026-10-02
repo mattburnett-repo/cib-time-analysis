@@ -12,7 +12,6 @@ from modules.timeseries_gui_config import (
     STEP_EXPLORE,
     STEP_INSPECT,
     STEP_SYNC_DELAY,
-    STEP_WEIGHTS,
 )
 
 
@@ -41,14 +40,14 @@ class StepperNavMixin:
             f"{DATASET_OPTIONS[cfg.toggle_data.value]} · "
             f"{METHOD_OPTIONS[cfg.toggle_analysis.value]} · "
             f"step {int(cfg.step_size.value)}s · "
-            f"window {int(cfg.win_size.value)}"
+            f"window size (steps) {int(cfg.win_size.value)}"
         )
 
     def unlock_after_build(self):
         self.set_step_done(self.panels.configure.step, True)
         self.set_step_done(self.panels.build.step, True)
         self.panels.build.step.enable()
-        self.panels.weights.step.enable()
+        self.panels.explore.step.enable()
 
     def sync_build_step_ui(self):
         """Restore Build-step labels/buttons from graph session state."""
@@ -87,17 +86,9 @@ class StepperNavMixin:
         self.sync_build_step_ui()
         self.stepper.set_value(STEP_BUILD)
 
-    def go_to_weights(self):
-        self.dismiss_tooltips()
-        self.set_step_done(self.panels.build.step, True)
-        self.panels.weights.step.enable()
-        self.stepper.set_value(STEP_WEIGHTS)
-        # Defer until the step panel is visible — ECharts needs a real size to draw.
-        ui.timer(STEP_SYNC_DELAY, self.sync_weights_step_ui, once=True)
-
     def go_to_explore(self):
         self.dismiss_tooltips()
-        self.set_step_done(self.panels.weights.step, True)
+        self.set_step_done(self.panels.build.step, True)
         self.panels.explore.step.enable()
         self.stepper.set_value(STEP_EXPLORE)
         ui.timer(STEP_SYNC_DELAY, self.sync_explore_step_ui, once=True)
@@ -131,11 +122,9 @@ class StepperNavMixin:
         self.dismiss_tooltips()
         self.set_step_done(self.panels.configure.step, False)
         self.set_step_done(self.panels.build.step, False)
-        self.set_step_done(self.panels.weights.step, False)
         self.set_step_done(self.panels.explore.step, False)
         self.set_step_done(self.panels.inspect.step, False)
         self.panels.build.step.disable()
-        self.panels.weights.step.disable()
         self.panels.explore.step.disable()
         self.panels.inspect.step.disable()
         self.selected_edge["user0"] = None
@@ -154,8 +143,6 @@ class StepperNavMixin:
         self.dismiss_tooltips()
         if e.value == STEP_BUILD:
             self.sync_build_step_ui()
-        elif e.value == STEP_WEIGHTS:
-            ui.timer(STEP_SYNC_DELAY, self.sync_weights_step_ui, once=True)
         elif e.value == STEP_EXPLORE:
             ui.timer(STEP_SYNC_DELAY, self.sync_explore_step_ui, once=True)
         elif e.value == STEP_INSPECT:

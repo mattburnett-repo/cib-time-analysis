@@ -49,7 +49,6 @@ def main_page():
 
         # Future steps stay disabled until prior steps succeed.
         panels.build.step.disable()
-        panels.weights.step.disable()
         panels.explore.step.disable()
         panels.inspect.step.disable()
 

@@ -213,20 +213,17 @@ async def test_mygraph_create_graph_always_rebuilds(my_graph):
         assert cpu_bound.await_count == 2
 
 
-def test_mygraph_create_egraph_and_weights_without_graph(my_graph):
+def test_mygraph_create_egraph_without_graph(my_graph):
     assert my_graph.create_egraph() is None
-    assert my_graph.get_graph_weights() is None
 
 
-def test_mygraph_create_egraph_and_weights_with_graph(my_graph):
+def test_mygraph_create_egraph_with_graph(my_graph):
     my_graph.graph = _weighted_graph()
 
     series = my_graph.create_egraph(num_top=2)
-    weights = my_graph.get_graph_weights()
 
     assert series is not None
     assert len(series[0]["links"]) == 2
-    assert np.allclose(weights, [5.0, 3.0, 1.0, 0.5])
     assert my_graph.cut_graph.number_of_edges() == 2
 
 

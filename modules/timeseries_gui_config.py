@@ -62,7 +62,6 @@ METHOD_HELP = {
 # NiceGUI stepper values — must match ui.step(...) labels.
 STEP_CONFIGURE = "Configure"
 STEP_BUILD = "Build graph"
-STEP_WEIGHTS = "Weight distribution"
 STEP_EXPLORE = "Explore network"
 STEP_INSPECT = "Compare users"
 

@@ -18,7 +18,6 @@ from modules.timeseries_gui_config import (
     STEP_CONFIGURE,
     STEP_EXPLORE,
     STEP_INSPECT,
-    STEP_WEIGHTS,
 )
 
 
@@ -40,12 +39,6 @@ class BuildStep:
     status_label: Any
     create_button: Any
     next_from_build: Any
-
-
-@dataclass
-class WeightsStep:
-    step: Any
-    weight_chart_slot: Any
 
 
 @dataclass
@@ -75,7 +68,6 @@ class StepperPanels:
 
     configure: ConfigureStep
     build: BuildStep
-    weights: WeightsStep
     explore: ExploreStep
     inspect: InspectStep
 
@@ -207,13 +199,11 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
             next_from_build = ui.button(
-                f"Next: {STEP_WEIGHTS}",
-                on_click=stepper_controller.go_to_weights,
+                f"Next: {STEP_EXPLORE}",
+                on_click=stepper_controller.go_to_explore,
             ).props("unelevated")
             with next_from_build:
-                ui.tooltip(
-                    "View how strongly users are linked before browsing the network."
-                )
+                ui.tooltip("Open the network graph and choose a user link to compare.")
             next_from_build.disable()
 
     return BuildStep(
@@ -225,27 +215,6 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
         create_button=create_button,
         next_from_build=next_from_build,
     )
-
-
-# Mark: Weight distribution
-def build_weights_step(stepper: Any, stepper_controller: Any) -> WeightsStep:
-    with ui.step(STEP_WEIGHTS, icon="bar_chart") as step_weights:
-        ui.label(
-            "Review how edge weights are distributed before browsing the network."
-        ).classes("text-body2 text-grey-8 q-mb-sm")
-        with ui.card().classes("w-full"):
-            with ui.card_section().classes("w-full"):
-                weight_chart_slot = ui.element("div").classes("w-full")
-        with ui.stepper_navigation().classes("w-full justify-between"):
-            ui.button("Back", on_click=stepper.previous).props("flat")
-            ui.button(
-                f"Next: {STEP_EXPLORE}",
-                on_click=stepper_controller.go_to_explore,
-            ).props("unelevated").tooltip(
-                "Open the network graph and choose a user link to compare."
-            )
-
-    return WeightsStep(step=step_weights, weight_chart_slot=weight_chart_slot)
 
 
 # Mark: Explore network
@@ -404,7 +373,6 @@ def build_stepper_panels(
     return StepperPanels(
         configure=build_configure_step(stepper_controller),
         build=build_build_step(stepper, stepper_controller, graph),
-        weights=build_weights_step(stepper, stepper_controller),
         explore=build_explore_step(stepper, stepper_controller),
         inspect=build_inspect_step(stepper, stepper_controller),
     )

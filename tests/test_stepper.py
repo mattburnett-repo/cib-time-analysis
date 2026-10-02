@@ -14,7 +14,6 @@ from modules.stepper_steps import (
     ExploreStep,
     InspectStep,
     StepperPanels,
-    WeightsStep,
 )
 from modules.timeseries_gui_config import (
     DATASET_OPTIONS,
@@ -24,7 +23,6 @@ from modules.timeseries_gui_config import (
     STEP_EXPLORE,
     STEP_INSPECT,
     STEP_SYNC_DELAY,
-    STEP_WEIGHTS,
 )
 
 
@@ -62,7 +60,6 @@ def _panels():
             create_button=_widget(),
             next_from_build=_widget(),
         ),
-        weights=WeightsStep(step=_widget(), weight_chart_slot=_widget()),
         explore=ExploreStep(
             step=_widget(),
             slider=_widget(value=10),
@@ -91,7 +88,6 @@ def controller():
         current_set=None,
         create_graph=AsyncMock(),
         create_egraph=MagicMock(return_value=[{"type": "graph", "links": []}]),
-        get_graph_weights=MagicMock(return_value=np.array([5.0, 3.0, 1.0])),
         get_user_tvec=AsyncMock(return_value=(np.array([1.0, 0.0, 1.0]), 2)),
         get_user_content=AsyncMock(return_value=(["hello", "world"], ["t0", "t1"])),
         get_overlapping_content=AsyncMock(
@@ -129,7 +125,7 @@ def test_set_step_done_toggles_props(controller):
 def test_refresh_config_summary_uses_current_settings(controller):
     controller.refresh_config_summary()
     controller.panels.build.config_summary.set_text.assert_called_once_with(
-        f"{DATASET_OPTIONS[0]} · {METHOD_OPTIONS[0]} · step 300s · window 2"
+        f"{DATASET_OPTIONS[0]} · {METHOD_OPTIONS[0]} · step 300s · window size (steps) 2"
     )
 
 
@@ -151,7 +147,7 @@ def test_sync_build_step_ui_with_matching_graph(controller):
     controller.panels.build.create_button.disable.assert_called()
     controller.panels.build.next_from_build.enable.assert_called()
     controller.panels.build.step.enable.assert_called()
-    controller.panels.weights.step.enable.assert_called()
+    controller.panels.explore.step.enable.assert_called()
 
 
 def test_sync_build_step_ui_with_stale_settings(controller):
@@ -165,14 +161,7 @@ def test_sync_build_step_ui_with_stale_settings(controller):
 
 
 @patch("modules.stepper_nav.ui.timer")
-def test_go_to_weights_and_explore_schedule_sync(mock_timer, controller):
-    controller.go_to_weights()
-    controller.stepper.set_value.assert_called_with(STEP_WEIGHTS)
-    mock_timer.assert_called_with(
-        STEP_SYNC_DELAY, controller.sync_weights_step_ui, once=True
-    )
-
-    mock_timer.reset_mock()
+def test_go_to_explore_schedules_sync(mock_timer, controller):
     controller.go_to_explore()
     controller.stepper.set_value.assert_called_with(STEP_EXPLORE)
     mock_timer.assert_called_with(
@@ -382,11 +371,6 @@ def test_on_stepper_change_routes_steps(mock_timer, controller):
     controller.on_stepper_change(SimpleNamespace(value=STEP_BUILD))
     controller.panels.build.status_label.set_text.assert_called()
 
-    controller.on_stepper_change(SimpleNamespace(value=STEP_WEIGHTS))
-    mock_timer.assert_called_with(
-        STEP_SYNC_DELAY, controller.sync_weights_step_ui, once=True
-    )
-
     mock_timer.reset_mock()
     controller.on_stepper_change(SimpleNamespace(value=STEP_EXPLORE))
     mock_timer.assert_called_with(
@@ -413,12 +397,3 @@ def test_schedule_chart_resize_skips_deleted_charts(mock_timer, controller):
     callback = mock_timer.call_args.args[1]
     callback()
     chart.run_chart_method.assert_called_with("resize")
-
-
-@patch("modules.stepper_explore.ui.label")
-@patch("modules.stepper_explore.ui.timer")
-def test_sync_weights_step_ui_without_graph(mock_timer, mock_label, controller):
-    mock_label.return_value.classes.return_value = MagicMock()
-    controller.sync_weights_step_ui()
-    controller.panels.weights.weight_chart_slot.clear.assert_called()
-    mock_label.assert_called()

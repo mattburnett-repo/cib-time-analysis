@@ -1,8 +1,7 @@
-"""Weights + Explore network panel sync and edge selection for StepperController."""
+"""Explore network panel sync and edge selection for StepperController."""
 
 from __future__ import annotations
 
-import numpy as np
 from nicegui import ui
 from nicegui.events import GenericEventArguments
 
@@ -15,7 +14,7 @@ from modules.chart_utils import (
 
 
 class StepperExploreMixin:
-    """Weight histogram, network chart, and user-link selection."""
+    """Network chart and user-link selection."""
 
     def schedule_chart_resize(self, chart, delays=(0.05, 0.25)) -> None:
         """Resize after layout settles; skip if the chart was cleared/replaced."""
@@ -27,58 +26,6 @@ class StepperExploreMixin:
 
         for delay in delays:
             ui.timer(delay, _resize, once=True)
-
-    def sync_weights_step_ui(self):
-        """Rebuild the histogram in-place so it draws after the step becomes visible."""
-        slot = self.panels.weights.weight_chart_slot
-        slot.clear()
-        if self.graph.graph is None:
-            with slot:
-                ui.label("Build a graph first to see weight distribution.").classes(
-                    "text-body2 text-grey-7"
-                )
-            return
-
-        wts = self.graph.get_graph_weights()
-        if wts is None or len(wts) == 0:
-            with slot:
-                ui.label("No edge weights available for this graph.").classes(
-                    "text-body2 text-grey-7"
-                )
-            return
-
-        hist, edges = np.histogram(np.log1p(wts), bins=50)
-        options = {
-            "title": {"text": "Log histogram of edge weights", "left": "center"},
-            "tooltip": {"trigger": "axis"},
-            "grid": {
-                "left": "2%",
-                "right": "2%",
-                "top": 56,
-                "bottom": 56,
-                "containLabel": True,
-            },
-            "xAxis": {
-                "type": "category",
-                "data": [f"{edge:.2f}" for edge in edges[:-1]],
-                "name": "log1p(weight)",
-                "nameLocation": "middle",
-                "nameGap": 28,
-                "axisLabel": {"rotate": 45, "interval": 4},
-            },
-            "yAxis": {"type": "value", "name": "count"},
-            "series": [
-                {"name": "count", "type": "bar", "data": [int(v) for v in hist]}
-            ],
-        }
-        with slot:
-            chart = (
-                ui.echart(options)
-                .classes("w-full")
-                .style("display:block; width:100%; min-width:100%; height:360px;")
-            )
-        # Chart often mounts before the stepper panel has its final width.
-        self.schedule_chart_resize(chart)
 
     def refresh_edge_select_options(self):
         edge_select = self.panels.explore.edge_select

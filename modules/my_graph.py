@@ -58,13 +58,6 @@ class MyGraph:
         self.cut_graph = cut_graph_by_weight(self.graph, num_top)
         return plot_subgraph_echart(self.cut_graph)
 
-    def get_graph_weights(self):
-        if self.graph is None:
-            return None
-        return np.sort(
-            np.array([wt for u, v, wt in self.graph.edges.data("norm_weight")])
-        )[::-1]
-
     async def _ensure_csv(self):
         """Load the active dataset CSV once per build; reuse for Compare queries."""
         if self._csv_cache is not None:
