@@ -39,6 +39,15 @@ You need a GitHub account with Codespaces enabled.
 2. In the Codespace terminal, run: `./start.sh`
 3. If the app doesn’t open, use **Ports → 8080**.
 
+**Not seeing recent changes?** A Codespace can lag behind `main`. Before `./start.sh`, pull the latest code:
+
+```bash
+./updateContainer.sh
+./start.sh
+```
+
+`updateContainer.sh` runs `git pull origin main` and prints the latest commits so you can confirm you’re up to date.
+
 
 ## Datasets (`csv_data/`)
 
