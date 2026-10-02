@@ -8,6 +8,8 @@ from nicegui.events import GenericEventArguments
 
 from modules.chart_utils import (
     NETWORK_CLICK_JS,
+    network_hover_clear_labels_js,
+    network_hover_show_labels_js,
     users_from_edge_payload,
 )
 
@@ -109,7 +111,7 @@ class StepperExploreMixin:
 
         with explore.network_chart_slot:
             chart = (
-                ui.echart({"series": series, "tooltip": {}})
+                ui.echart({"series": series, "tooltip": {"show": False}})
                 .classes("w-full")
                 .style("display:block; width:100%; min-width:100%; height:420px;")
             )
@@ -117,6 +119,14 @@ class StepperExploreMixin:
                 "chart:click",
                 self.handle_network_chart_click,
                 js_handler=NETWORK_CLICK_JS,
+            )
+            chart.on(
+                "chart:mouseover",
+                js_handler=network_hover_show_labels_js(chart.id),
+            )
+            chart.on(
+                "chart:globalout",
+                js_handler=network_hover_clear_labels_js(chart.id),
             )
             self.network_chart["chart"] = chart
 
@@ -142,10 +152,8 @@ class StepperExploreMixin:
         explore = self.panels.explore
         self.selected_edge["user0"] = user0
         self.selected_edge["user1"] = user1
-        explore.selected_edge_label.set_text(f"Selected: {user0}  ↔  {user1}")
         self._sync_edge_select_value(user0, user1)
         explore.inspect_button.enable()
-        ui.notify(f"Selected {user0} ↔ {user1}")
         if advance:
             self.go_to_inspect()
 
@@ -153,7 +161,7 @@ class StepperExploreMixin:
         if not value or "\t" not in str(value):
             return
         user0, user1 = str(value).split("\t", 1)
-        # Already selected via graph click — avoid duplicate notify/work.
+        # Already selected via graph click — avoid duplicate work.
         if (
             self.selected_edge["user0"] == user0
             and self.selected_edge["user1"] == user1

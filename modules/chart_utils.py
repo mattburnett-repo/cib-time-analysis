@@ -2,12 +2,34 @@
 
 import networkx as nx
 
+# Slightly above ECharts' default (12) so hovered account names stay readable.
+NODE_LABEL_FONT_SIZE = 14
+
+# Edge colors on the displayed (cut) graph, by max endpoint degree N:
+# Grey for 1:1 (distinct from default ECharts node blue); warmer colors as N grows.
+EDGE_COLOR_PAIR = "#B0B7C3"  # N == 1 (light grey)
+EDGE_COLOR_GROUP_2_5 = "#1B9E77"  # 2 <= N <= 5 (teal/green)
+EDGE_COLOR_GROUP_6_10 = "#D7268A"  # 6 <= N <= 10 (magenta)
+EDGE_COLOR_GROUP_11_20 = "#8B2E8B"  # N >= 11 (incl. >20)
+
+EDGE_COLOR_LEGEND = (
+    (EDGE_COLOR_PAIR, "1:1 pair"),
+    (EDGE_COLOR_GROUP_2_5, "Group of 2–5"),
+    (EDGE_COLOR_GROUP_6_10, "Group of 6–10"),
+    (EDGE_COLOR_GROUP_11_20, "Group of 11–20"),
+)
+
 ECHART_GRAPH_DEFAULTS = {
     "type": "graph",
     "layout": "force",
     "symbolSize": 28,
     "roam": "scale",  # zoom only — pan/drag was swallowing edge clicks
-    "label": {"show": True, "position": "right", "formatter": "{b}"},
+    "label": {
+        "show": False,
+        "position": "right",
+        "formatter": "{b}",
+        "fontSize": NODE_LABEL_FONT_SIZE,
+    },
     "edgeLabel": {"show": False},
     "lineStyle": {"opacity": 0.9, "width": 8, "curveness": 0.2},
     "edgeSymbol": ["none", "none"],
@@ -15,7 +37,12 @@ ECHART_GRAPH_DEFAULTS = {
         "repulsion": 140,
         "edgeLength": [60, 160],
     },
-    "emphasis": {"focus": "adjacency", "lineStyle": {"width": 14}},
+    "animationDurationUpdate": 0,
+    # Dim unrelated nodes/edges on hover; labels are toggled by NETWORK_HOVER_*_JS.
+    "emphasis": {
+        "focus": "adjacency",
+        "lineStyle": {"width": 14},
+    },
 }
 
 # Browser-side handler for ECharts graph clicks (passed to NiceGUI's js_handler).
@@ -36,6 +63,62 @@ NETWORK_CLICK_JS = """
         emit({ dataType: 'node', name: evt.name || '' });
     }
 }
+"""
+
+
+def network_hover_show_labels_js(chart_id: int) -> str:
+    """Client-only hover handler: show labels on the edge's endpoint nodes."""
+    return f"""
+(evt) => {{
+    const c = getElement({chart_id}).chart;
+    if (!c || !evt || evt.componentType !== 'series') return;
+    const series = (c.getOption().series || [])[0];
+    if (!series || !series.data) return;
+    let names = [];
+    if (evt.dataType === 'edge') {{
+        const d = evt.data || {{}};
+        names = [d.source, d.target];
+    }} else if (evt.dataType === 'node') {{
+        names = [evt.name || (evt.data && evt.data.name)];
+    }} else {{
+        return;
+    }}
+    const nameSet = new Set(names.filter((n) => n != null).map(String));
+    const data = series.data.map((n) => {{
+        const id = String(n.id != null ? n.id : n.name);
+        const show = nameSet.has(id) || nameSet.has(String(n.name));
+        return Object.assign({{}}, n, {{
+            label: {{
+                show: show,
+                position: 'right',
+                formatter: '{{b}}',
+                fontSize: {NODE_LABEL_FONT_SIZE},
+            }},
+        }});
+    }});
+    c.setOption({{ series: [{{ data: data }}] }}, {{ lazyUpdate: true }});
+}}
+"""
+
+
+def network_hover_clear_labels_js(chart_id: int) -> str:
+    """Client-only handler: hide all node labels when the pointer leaves."""
+    return f"""
+() => {{
+    const c = getElement({chart_id}).chart;
+    if (!c) return;
+    const series = (c.getOption().series || [])[0];
+    if (!series || !series.data) return;
+    const data = series.data.map((n) => Object.assign({{}}, n, {{
+        label: {{
+            show: false,
+            position: 'right',
+            formatter: '{{b}}',
+            fontSize: {NODE_LABEL_FONT_SIZE},
+        }},
+    }}));
+    c.setOption({{ series: [{{ data: data }}] }}, {{ lazyUpdate: true }});
+}}
 """
 
 
@@ -78,18 +161,37 @@ def users_from_edge_payload(args, nodes: list | None = None) -> tuple[str, str] 
     return None
 
 
+def edge_is_one_to_one(G: nx.Graph, u, v) -> bool:
+    """True when the edge is an isolated pair in G (both endpoints degree 1)."""
+    return G.degree[u] == 1 and G.degree[v] == 1
+
+
+def edge_color_for_link(G: nx.Graph, u, v) -> str:
+    """Color by max endpoint degree on the displayed graph."""
+    n = max(G.degree[u], G.degree[v])
+    if n <= 1:
+        return EDGE_COLOR_PAIR
+    if n <= 5:
+        return EDGE_COLOR_GROUP_2_5
+    if n <= 10:
+        return EDGE_COLOR_GROUP_6_10
+    return EDGE_COLOR_GROUP_11_20
+
+
 def plot_subgraph_echart(G: nx.Graph):
     nodes = list(G.nodes())
-    data = [{"name": node, "id": node, "value": 1} for node in nodes]
+    data = [{"name": node, "id": node} for node in nodes]
     links = []
     for edge in G.edges():
+        u, v = edge[0], edge[1]
         weight = G.edges[edge].get("norm_weight", 1.0)
         links.append(
             {
-                "source": edge[0],
-                "target": edge[1],
-                "name": f"{edge[0]} > {edge[1]}",
+                "source": u,
+                "target": v,
+                "name": f"{u} > {v}",
                 "value": float(weight),
+                "lineStyle": {"color": edge_color_for_link(G, u, v)},
             }
         )
     series = [dict(ECHART_GRAPH_DEFAULTS, data=data, links=links)]

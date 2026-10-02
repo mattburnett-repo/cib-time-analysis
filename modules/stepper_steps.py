@@ -8,6 +8,7 @@ from typing import Any
 
 from nicegui import ui
 
+from modules.chart_utils import EDGE_COLOR_LEGEND
 from modules.timeseries_gui_config import (
     DATASET_HELP,
     DATASET_OPTIONS,
@@ -52,7 +53,6 @@ class ExploreStep:
     step: Any
     slider: Any
     edge_select: Any
-    selected_edge_label: Any
     network_chart_slot: Any
     inspect_button: Any
 
@@ -80,6 +80,7 @@ class StepperPanels:
     inspect: InspectStep
 
 
+# Mark: Configure (shared option buttons)
 def _build_option_buttons(
     options: dict[int, str],
     help_by_index: dict[int, str],
@@ -113,6 +114,7 @@ def _build_option_buttons(
             buttons[idx] = button
 
 
+# Mark: Configure
 def build_configure_step(stepper_controller: Any) -> ConfigureStep:
     with ui.step(STEP_CONFIGURE, icon="tune") as step_configure:
         ui.label("Choose the dataset and how similarity is measured.").classes(
@@ -174,6 +176,7 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
     )
 
 
+# Mark: Build graph
 def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> BuildStep:
     with ui.step(STEP_BUILD, icon="hub") as step_build:
         with ui.column().classes("w-full items-center gap-2"):
@@ -224,6 +227,7 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
     )
 
 
+# Mark: Weight distribution
 def build_weights_step(stepper: Any, stepper_controller: Any) -> WeightsStep:
     with ui.step(STEP_WEIGHTS, icon="bar_chart") as step_weights:
         ui.label(
@@ -244,6 +248,7 @@ def build_weights_step(stepper: Any, stepper_controller: Any) -> WeightsStep:
     return WeightsStep(step=step_weights, weight_chart_slot=weight_chart_slot)
 
 
+# Mark: Explore network
 def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
     with ui.step(STEP_EXPLORE, icon="account_tree") as step_explore:
         ui.label(
@@ -283,7 +288,7 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                 ui.label("Choose a user link").classes("text-subtitle2")
                 edge_select = ui.select(
                     options={},
-                    label="Select a connection",
+                    label="Click here to select a connection",
                     with_input=True,
                 ).classes("w-full")
                 with edge_select:
@@ -294,9 +299,17 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                 edge_select.on_value_change(
                     lambda e: stepper_controller.on_edge_selected_from_list(e.value)
                 )
-                selected_edge_label = ui.label(
+                ui.label(
                     "Or click a thick line between two users in the network below."
                 ).classes("text-caption text-grey-7 q-mt-sm")
+                with ui.row().classes("items-center gap-4 q-mt-xs q-mb-sm flex-wrap"):
+                    for color, label in EDGE_COLOR_LEGEND:
+                        with ui.row().classes("items-center gap-1"):
+                            ui.element("div").style(
+                                f"width:18px;height:4px;border-radius:2px;"
+                                f"background:{color};"
+                            )
+                            ui.label(label).classes("text-caption text-grey-7")
                 network_chart_slot = ui.element("div").classes("w-full")
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
@@ -314,12 +327,12 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
         step=step_explore,
         slider=slider,
         edge_select=edge_select,
-        selected_edge_label=selected_edge_label,
         network_chart_slot=network_chart_slot,
         inspect_button=inspect_button,
     )
 
 
+# Mark: Compare users
 def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
     with ui.step(STEP_INSPECT, icon="compare_arrows") as step_inspect:
         with ui.card().classes("w-full"):
@@ -383,6 +396,7 @@ def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
     )
 
 
+# Mark: All steps (orchestrator)
 def build_stepper_panels(
     stepper: Any, stepper_controller: Any, graph: Any
 ) -> StepperPanels:

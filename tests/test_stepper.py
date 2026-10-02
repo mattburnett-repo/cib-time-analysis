@@ -67,7 +67,6 @@ def _panels():
             step=_widget(),
             slider=_widget(value=10),
             edge_select=_widget(options={}),
-            selected_edge_label=_widget(),
             network_chart_slot=_widget(),
             inspect_button=_widget(),
         ),
@@ -229,18 +228,13 @@ def test_refresh_edge_select_options_with_cut_graph(controller):
 
 
 @pytest.mark.asyncio
-@patch("modules.stepper_explore.ui.notify")
-async def test_select_user_pair_updates_state(mock_notify, controller):
+async def test_select_user_pair_updates_state(controller):
     controller.panels.explore.edge_select.options = {"alice\tbob": "alice  ↔  bob"}
     await controller.select_user_pair("alice", "bob")
 
     assert controller.selected_edge == {"user0": "alice", "user1": "bob"}
-    controller.panels.explore.selected_edge_label.set_text.assert_called_with(
-        "Selected: alice  ↔  bob"
-    )
     controller.panels.explore.edge_select.set_value.assert_called_with("alice\tbob")
     controller.panels.explore.inspect_button.enable.assert_called()
-    mock_notify.assert_called()
 
 
 def test_on_edge_selected_from_list_ignores_junk_and_duplicates(controller):

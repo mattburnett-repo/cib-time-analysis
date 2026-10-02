@@ -7,7 +7,15 @@ import pytest
 
 from modules.chart_utils import (
     ECHART_GRAPH_DEFAULTS,
+    EDGE_COLOR_GROUP_2_5,
+    EDGE_COLOR_GROUP_6_10,
+    EDGE_COLOR_GROUP_11_20,
+    EDGE_COLOR_PAIR,
     NETWORK_CLICK_JS,
+    edge_color_for_link,
+    edge_is_one_to_one,
+    network_hover_clear_labels_js,
+    network_hover_show_labels_js,
     plot_subgraph_echart,
     resolve_node_ref,
     users_from_edge_payload,
@@ -68,12 +76,56 @@ def test_plot_subgraph_echart_series_shape():
     assert all(">" in link["name"] for link in series[0]["links"])
 
 
+def test_plot_subgraph_echart_colors_by_group_size():
+    g = nx.Graph()
+    g.add_edge("a", "b", norm_weight=1.0)  # 1:1
+    for i in range(3):  # hub degree 3 → 2–5
+        g.add_edge("h3", f"l3_{i}", norm_weight=1.0)
+    for i in range(7):  # hub degree 7 → 6–10
+        g.add_edge("h7", f"l7_{i}", norm_weight=1.0)
+    for i in range(12):  # hub degree 12 → 11–20
+        g.add_edge("h12", f"l12_{i}", norm_weight=1.0)
+
+    links = {
+        frozenset((lk["source"], lk["target"])): lk
+        for lk in plot_subgraph_echart(g)[0]["links"]
+    }
+    assert links[frozenset(("a", "b"))]["lineStyle"]["color"] == EDGE_COLOR_PAIR
+    assert (
+        links[frozenset(("h3", "l3_0"))]["lineStyle"]["color"] == EDGE_COLOR_GROUP_2_5
+    )
+    assert (
+        links[frozenset(("h7", "l7_0"))]["lineStyle"]["color"] == EDGE_COLOR_GROUP_6_10
+    )
+    assert (
+        links[frozenset(("h12", "l12_0"))]["lineStyle"]["color"]
+        == EDGE_COLOR_GROUP_11_20
+    )
+    assert edge_color_for_link(g, "h12", "l12_0") == EDGE_COLOR_GROUP_11_20
+    assert edge_is_one_to_one(g, "a", "b")
+    assert not edge_is_one_to_one(g, "h3", "l3_0")
+
+
 def test_echart_defaults_favor_edge_clicks():
     assert ECHART_GRAPH_DEFAULTS["roam"] == "scale"
     assert ECHART_GRAPH_DEFAULTS["lineStyle"]["width"] >= 8
+    assert ECHART_GRAPH_DEFAULTS["label"]["show"] is False
+    assert ECHART_GRAPH_DEFAULTS["emphasis"]["focus"] == "adjacency"
+    assert "label" not in ECHART_GRAPH_DEFAULTS["emphasis"]
     assert "source" in NETWORK_CLICK_JS
     assert "target" in NETWORK_CLICK_JS
     assert "dataType" in NETWORK_CLICK_JS
+
+
+def test_network_hover_label_js_targets_chart_and_endpoints():
+    show_js = network_hover_show_labels_js(42)
+    clear_js = network_hover_clear_labels_js(42)
+    assert "getElement(42)" in show_js
+    assert "dataType === 'edge'" in show_js
+    assert "d.source" in show_js and "d.target" in show_js
+    assert "show: show" in show_js
+    assert "getElement(42)" in clear_js
+    assert "show: false" in clear_js
 
 
 def test_resolve_node_ref_string_and_index():

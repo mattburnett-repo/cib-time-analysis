@@ -141,9 +141,6 @@ class StepperNavMixin:
         self.selected_edge["user0"] = None
         self.selected_edge["user1"] = None
         explore = self.panels.explore
-        explore.selected_edge_label.set_text(
-            "Or click a thick line (edge) in the network below."
-        )
         explore.edge_select.set_options({})
         explore.edge_select.set_value(None)
         explore.edge_select.disable()
