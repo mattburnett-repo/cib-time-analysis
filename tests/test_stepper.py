@@ -94,6 +94,9 @@ def controller():
         get_graph_weights=MagicMock(return_value=np.array([5.0, 3.0, 1.0])),
         get_user_tvec=AsyncMock(return_value=(np.array([1.0, 0.0, 1.0]), 2)),
         get_user_content=AsyncMock(return_value=(["hello", "world"], ["t0", "t1"])),
+        get_overlapping_content=AsyncMock(
+            return_value=[("alice", "hello", "t0"), ("bob", "world", "t1")]
+        ),
     )
     stepper = _widget(value=STEP_CONFIGURE)
     ctrl = StepperController()
@@ -289,10 +292,10 @@ async def test_load_edge_inspection_success(
     chart = _widget(options={})
     mock_echart.return_value.classes.return_value.style.return_value = chart
 
-    controller.graph.get_user_content = AsyncMock(
-        side_effect=[
-            (["a1"], ["2024-01-01"]),
-            (["b1"], ["2024-01-02"]),
+    controller.graph.get_overlapping_content = AsyncMock(
+        return_value=[
+            ("alice", "a1", "2024-01-01"),
+            ("bob", "b1", "2024-01-02"),
         ]
     )
 
@@ -330,7 +333,7 @@ async def test_load_edge_inspection_aborts_when_superseded(controller):
 
     controller.graph.get_user_tvec = AsyncMock(side_effect=slow_tvec)
     await controller.load_edge_inspection("alice", "bob")
-    controller.graph.get_user_content.assert_not_called()
+    controller.graph.get_overlapping_content.assert_not_called()
 
 
 @pytest.mark.asyncio

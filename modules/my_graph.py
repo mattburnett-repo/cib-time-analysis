@@ -10,6 +10,7 @@ from app.time_analysis import (
     METHODS,
     content_for_user,
     get_tvec,
+    overlapping_content_for_users,
     read_csv,
 )
 from modules.chart_utils import plot_subgraph_echart
@@ -99,4 +100,25 @@ class MyGraph:
             dataset.user_col_name,
             dataset.content_col_name,
             dataset.time_col_name,
+        )
+
+    async def get_overlapping_content(self, user0, user1):
+        """Posts from either user within the configured analysis window of the other."""
+        if not self._require_user(user0) or not self._require_user(user1):
+            return None
+        if self.current_set is None:
+            return None
+        dataset, csv_df = await self._ensure_csv()
+        t_step = int(self.current_set[2])
+        win_size = int(self.current_set[3])
+        dt = int(win_size * t_step)
+        return await run.io_bound(
+            overlapping_content_for_users,
+            user0,
+            user1,
+            csv_df,
+            dataset.user_col_name,
+            dataset.content_col_name,
+            dataset.time_col_name,
+            dt,
         )

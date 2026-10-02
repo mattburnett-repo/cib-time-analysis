@@ -164,6 +164,70 @@ def content_for_user(user, df, user_col_name, content_col_name, time_col_name):
     )
 
 
+def _mask_within_dt(
+    times: np.ndarray, other_times: np.ndarray, dt: float
+) -> np.ndarray:
+    """True where each time has at least one other_time within dt (inclusive)."""
+    if len(times) == 0:
+        return np.array([], dtype=bool)
+    if len(other_times) == 0:
+        return np.zeros(len(times), dtype=bool)
+
+    other = np.sort(other_times.astype(float, copy=False))
+    mask = np.zeros(len(times), dtype=bool)
+    for i, t in enumerate(times.astype(float, copy=False)):
+        j = np.searchsorted(other, t)
+        if j < len(other) and other[j] - t <= dt:
+            mask[i] = True
+        elif j > 0 and t - other[j - 1] <= dt:
+            mask[i] = True
+    return mask
+
+
+def overlapping_content_for_users(
+    user0,
+    user1,
+    df,
+    user_col_name,
+    content_col_name,
+    time_col_name,
+    dt,
+):
+    """Posts from either user that fall within dt of at least one post by the other.
+
+    Returns a list of (user, content, display_time) sorted by relative timestamp.
+    """
+    rows0 = df[df[user_col_name] == user0]
+    rows1 = df[df[user_col_name] == user1]
+    rel0 = rows0["rel_timestamp"].to_numpy(dtype=float)
+    rel1 = rows1["rel_timestamp"].to_numpy(dtype=float)
+    mask0 = _mask_within_dt(rel0, rel1, dt)
+    mask1 = _mask_within_dt(rel1, rel0, dt)
+
+    items: list[tuple] = []
+    for keep, content, stamp, rel in zip(
+        mask0,
+        rows0[content_col_name].to_numpy(),
+        rows0[time_col_name].to_numpy(),
+        rel0,
+        strict=True,
+    ):
+        if keep:
+            items.append((user0, content, stamp, rel))
+    for keep, content, stamp, rel in zip(
+        mask1,
+        rows1[content_col_name].to_numpy(),
+        rows1[time_col_name].to_numpy(),
+        rel1,
+        strict=True,
+    ):
+        if keep:
+            items.append((user1, content, stamp, rel))
+
+    items.sort(key=lambda row: row[3])
+    return [(user, content, stamp) for user, content, stamp, _rel in items]
+
+
 def get_user_content(user, csv_name, time_col_name, user_col_name, content_col_name):
     csv_df, _time_data = read_csv(
         csv_name, time_col_name, user_col_name, content_col_name

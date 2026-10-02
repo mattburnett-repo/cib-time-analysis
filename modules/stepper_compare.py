@@ -100,17 +100,25 @@ class StepperCompareMixin:
             await asyncio.sleep(0)
             if load_id != self.compare_load_id["n"]:
                 return
-            contents0, time0 = await self.graph.get_user_content(user0)
-            contents1, time1 = await self.graph.get_user_content(user1)
+            items = await self.graph.get_overlapping_content(user0, user1)
             if load_id != self.compare_load_id["n"]:
                 return
-            user_and_contents = [(user0, c, t) for c, t in zip(contents0, time0)]
-            user_and_contents += [(user1, c, t) for c, t in zip(contents1, time1)]
-            user_and_contents.sort(key=lambda x: x[2])
             inspect.scroll_container.clear()
             with inspect.scroll_container:
-                for user, content, time in user_and_contents:
-                    ui.chat_message(content, name=user, stamp=time, sent=user == user0)
+                if items is None:
+                    ui.label("Could not load overlapping posts for this pair.").classes(
+                        "text-body2 text-grey-7"
+                    )
+                elif not items:
+                    ui.label(
+                        "No posts fall within an overlapping time window "
+                        "for this pair (based on step size × window size)."
+                    ).classes("text-body2 text-grey-7")
+                else:
+                    for user, content, time in items:
+                        ui.chat_message(
+                            content, name=user, stamp=time, sent=user == user0
+                        )
         finally:
             if load_id == self.compare_load_id["n"]:
                 inspect.compare_loading.visible = False

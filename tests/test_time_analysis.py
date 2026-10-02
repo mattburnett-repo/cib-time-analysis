@@ -100,6 +100,50 @@ def test_get_user_content_and_tvec(sample_csv):
     assert tvec.sum() == 2
 
 
+def test_overlapping_content_for_users_filters_by_window(sample_csv):
+    csv_df, _ = time_analysis.read_csv(*sample_csv)
+    # alice@0, bob@20, alice@40, bob@80 (rel seconds)
+    tight = time_analysis.overlapping_content_for_users(
+        "alice",
+        "bob",
+        csv_df,
+        "account.username",
+        "content_cleaned",
+        "created_at",
+        dt=20,
+    )
+    texts = [content for _user, content, _stamp in tight]
+    assert texts == ["first", "second", "third"]
+    assert "fifth" not in texts
+
+    loose = time_analysis.overlapping_content_for_users(
+        "alice",
+        "bob",
+        csv_df,
+        "account.username",
+        "content_cleaned",
+        "created_at",
+        dt=40,
+    )
+    assert [content for _user, content, _stamp in loose] == [
+        "first",
+        "second",
+        "third",
+        "fifth",
+    ]
+
+    none = time_analysis.overlapping_content_for_users(
+        "alice",
+        "bob",
+        csv_df,
+        "account.username",
+        "content_cleaned",
+        "created_at",
+        dt=15,
+    )
+    assert none == []
+
+
 def test_sliding_window_builds_edges(sample_csv, progress):
     graph = time_analysis.sliding_window(sample_csv, progress, win_size=2, t_step=20)
 
