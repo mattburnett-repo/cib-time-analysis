@@ -15,7 +15,6 @@ class StepperContext:
     graph: MyGraph
     selected_edge: dict[str, str | None]
     network_chart: dict[str, Any]
-    compare_chart: dict[str, Any]
     compare_load_id: dict[str, int]
     stepper: Any
     panels: Any  # StepperPanels — kept Any to avoid a session↔UI import cycle
@@ -31,7 +30,6 @@ def make_stepper_context(
     graph: MyGraph,
     selected_edge: dict[str, str | None],
     network_chart: dict[str, Any],
-    compare_chart: dict[str, Any],
     compare_load_id: dict[str, int],
     stepper: Any,
     panels: Any,
@@ -45,7 +43,6 @@ def make_stepper_context(
         graph=graph,
         selected_edge=selected_edge,
         network_chart=network_chart,
-        compare_chart=compare_chart,
         compare_load_id=compare_load_id,
         stepper=stepper,
         panels=panels,

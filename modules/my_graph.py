@@ -9,7 +9,6 @@ from nicegui import run, ui
 from app.time_analysis import (
     METHODS,
     content_for_user,
-    get_tvec,
     overlapping_content_for_users,
     read_csv,
 )
@@ -74,13 +73,6 @@ class MyGraph:
             ui.notify(f"User {user} not found in the graph.")
             return False
         return True
-
-    async def get_user_tvec(self, user):
-        if not self._require_user(user):
-            return None
-        dataset, csv_df = await self._ensure_csv()
-        t_step = int(self.current_set[2])
-        return await run.io_bound(get_tvec, user, csv_df, dataset.user_col_name, t_step)
 
     async def get_user_content(self, user):
         if not self._require_user(user):

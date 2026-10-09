@@ -36,11 +36,13 @@ class StepperNavMixin:
 
     def refresh_config_summary(self):
         cfg = self.panels.configure
+        t_step = int(cfg.step_size.value)
+        win_width = int(cfg.win_size.value)
+        window_seconds = t_step * win_width
         self.panels.build.config_summary.set_text(
             f"{DATASET_OPTIONS[cfg.toggle_data.value]} · "
             f"{METHOD_OPTIONS[cfg.toggle_analysis.value]} · "
-            f"step {int(cfg.step_size.value)}s · "
-            f"window size (steps) {int(cfg.win_size.value)}"
+            f"windows are {window_seconds}s, advancing every {t_step}s"
         )
 
     def unlock_after_build(self):
@@ -107,8 +109,6 @@ class StepperNavMixin:
         )
         inspect.edge_meta.set_text("")
         inspect.scroll_container.clear()
-        inspect.compare_chart_slot.clear()
-        self.compare_chart["chart"] = None
         inspect.compare_loading_label.set_text("Preparing comparison…")
         inspect.compare_loading.visible = True
         already_on_compare = self.stepper.value == STEP_INSPECT

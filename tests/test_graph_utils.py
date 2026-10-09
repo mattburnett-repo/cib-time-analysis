@@ -173,8 +173,8 @@ def test_users_from_edge_payload_ignores_nodes_and_junk():
 
 
 @pytest.mark.asyncio
-async def test_mygraph_csv_cache_loads_once_and_uses_step_size(my_graph):
-    from app.time_analysis import get_tvec
+async def test_mygraph_csv_cache_loads_once_and_uses_window(my_graph):
+    from app.time_analysis import overlapping_content_for_users
     from modules.timeseries_gui_config import DATASETS
 
     my_graph.graph = _weighted_graph()
@@ -188,12 +188,12 @@ async def test_mygraph_csv_cache_loads_once_and_uses_step_size(my_graph):
         assert df1 is df2 is csv_df
         assert io_bound.await_count == 1
 
-        io_bound.return_value = (np.array([1.0]), 2)
-        result = await my_graph.get_user_tvec("a")
-        assert result[1] == 2
+        io_bound.return_value = [("a", "hello", "t0")]
+        result = await my_graph.get_overlapping_content("a", "b")
+        assert result == [("a", "hello", "t0")]
         assert io_bound.await_count == 2
-        assert io_bound.await_args.args[0] is get_tvec
-        assert io_bound.await_args.args[4] == 300
+        assert io_bound.await_args.args[0] is overlapping_content_for_users
+        assert io_bound.await_args.args[7] == 600
 
 
 @pytest.mark.asyncio
@@ -229,10 +229,10 @@ def test_mygraph_create_egraph_with_graph(my_graph):
 
 @pytest.mark.asyncio
 async def test_mygraph_getters_require_graph_and_membership(my_graph):
-    assert await my_graph.get_user_tvec("alice") is None
     assert await my_graph.get_user_content("alice") is None
+    assert await my_graph.get_overlapping_content("alice", "bob") is None
 
     my_graph.graph = _weighted_graph()
     my_graph.current_set = (0, 0, 60, 2)
-    assert await my_graph.get_user_tvec("missing") is None
     assert await my_graph.get_user_content("missing") is None
+    assert await my_graph.get_overlapping_content("missing", "bob") is None

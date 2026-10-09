@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import networkx as nx
-import numpy as np
 import pytest
 from nicegui.events import GenericEventArguments
 
@@ -73,8 +72,6 @@ def _panels():
             edge_meta=_widget(),
             compare_loading=_widget(visible=False),
             compare_loading_label=_widget(),
-            activity_expansion=_widget(value=True),
-            compare_chart_slot=_widget(),
             scroll_container=_widget(),
         ),
     )
@@ -88,7 +85,6 @@ def controller():
         current_set=None,
         create_graph=AsyncMock(),
         create_egraph=MagicMock(return_value=[{"type": "graph", "links": []}]),
-        get_user_tvec=AsyncMock(return_value=(np.array([1.0, 0.0, 1.0]), 2)),
         get_user_content=AsyncMock(return_value=(["hello", "world"], ["t0", "t1"])),
         get_overlapping_content=AsyncMock(
             return_value=[("alice", "hello", "t0"), ("bob", "world", "t1")]
@@ -100,7 +96,6 @@ def controller():
         graph=graph,
         selected_edge={"user0": None, "user1": None},
         network_chart={"chart": None},
-        compare_chart={"chart": None},
         compare_load_id={"n": 0},
         stepper=stepper,
         panels=_panels(),
@@ -125,7 +120,8 @@ def test_set_step_done_toggles_props(controller):
 def test_refresh_config_summary_uses_current_settings(controller):
     controller.refresh_config_summary()
     controller.panels.build.config_summary.set_text.assert_called_once_with(
-        f"{DATASET_OPTIONS[0]} · {METHOD_OPTIONS[0]} · step 300s · window size (steps) 2"
+        f"{DATASET_OPTIONS[0]} · {METHOD_OPTIONS[0]} · "
+        f"windows are 600s, advancing every 300s"
     )
 
 
@@ -267,24 +263,17 @@ async def test_handle_network_chart_click_edge_and_node(mock_notify, controller)
 async def test_sync_compare_step_ui_without_selection(mock_label, controller):
     mock_label.return_value.classes.return_value = MagicMock()
     await controller.sync_compare_step_ui()
-    controller.panels.inspect.compare_chart_slot.clear.assert_called()
-    assert controller.compare_chart["chart"] is None
+    controller.panels.inspect.scroll_container.clear.assert_called()
+    mock_label.assert_called()
 
 
 @pytest.mark.asyncio
 @patch("modules.stepper_compare.ui.chat_message")
-@patch("modules.stepper_compare.ui.echart")
-@patch("modules.stepper_explore.ui.timer")
-async def test_load_edge_inspection_success(
-    mock_timer, mock_echart, mock_chat, controller
-):
-    chart = _widget(options={})
-    mock_echart.return_value.classes.return_value.style.return_value = chart
-
+async def test_load_edge_inspection_success(mock_chat, controller):
     controller.graph.get_overlapping_content = AsyncMock(
         return_value=[
-            ("alice", "a1", "2024-01-01"),
-            ("bob", "b1", "2024-01-02"),
+            ("alice", "a1", "2024-01-01 00:00:00"),
+            ("bob", "b1", "2024-01-02 14:30:05"),
         ]
     )
 
@@ -292,36 +281,43 @@ async def test_load_edge_inspection_success(
 
     controller.panels.inspect.edge_title.set_text.assert_any_call("alice  ↔  bob")
     meta = controller.panels.inspect.edge_meta.set_text.call_args_list[-1].args[0]
-    assert "alice: 2 posts (1 overlapping)" in meta
-    assert "bob: 2 posts (1 overlapping)" in meta
-    assert controller.compare_chart["chart"] is chart
+    assert "alice: 1 overlapping" in meta
+    assert "bob: 1 overlapping" in meta
     assert controller.panels.inspect.compare_loading.visible is False
-    mock_chat.assert_called()
+    mock_chat.assert_any_call("2024-01-01\n00:00:00\n\na1", name="alice", sent=True)
+    mock_chat.assert_any_call("2024-01-02\n14:30:05\n\nb1", name="bob", sent=False)
+
+
+def test_format_post_body_puts_date_and_time_above_text():
+    from modules.stepper_compare import format_post_body
+
+    assert format_post_body("hello", "2024-01-01 00:00:00") == (
+        "2024-01-01\n00:00:00\n\nhello"
+    )
+    assert format_post_body("hello", "not-a-date") == "not-a-date\n\nhello"
 
 
 @pytest.mark.asyncio
 @patch("modules.stepper_compare.ui.label")
-async def test_load_edge_inspection_handles_missing_series(mock_label, controller):
+async def test_load_edge_inspection_handles_missing_posts(mock_label, controller):
     mock_label.return_value.classes.return_value = MagicMock()
-    controller.graph.get_user_tvec = AsyncMock(return_value=None)
+    controller.graph.get_overlapping_content = AsyncMock(return_value=None)
 
     await controller.load_edge_inspection("alice", "bob")
 
-    controller.panels.inspect.edge_meta.set_text.assert_called_with(
-        "Could not load time series for this edge."
-    )
+    mock_label.assert_called()
     assert controller.panels.inspect.compare_loading.visible is False
 
 
 @pytest.mark.asyncio
 async def test_load_edge_inspection_aborts_when_superseded(controller):
-    async def slow_tvec(*_args):
+    async def slow_overlap(*_args):
         controller.compare_load_id["n"] += 1
-        return (np.array([1.0]), 1)
+        return [("alice", "a1", "t0")]
 
-    controller.graph.get_user_tvec = AsyncMock(side_effect=slow_tvec)
+    controller.graph.get_overlapping_content = AsyncMock(side_effect=slow_overlap)
     await controller.load_edge_inspection("alice", "bob")
-    controller.graph.get_overlapping_content.assert_not_called()
+    controller.panels.inspect.edge_meta.set_text.assert_called_with("")
 
 
 @pytest.mark.asyncio

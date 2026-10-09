@@ -10,7 +10,7 @@ class StepperController(StepperNavMixin, StepperExploreMixin, StepperCompareMixi
     Lifecycle:
     1. Constructed empty in time_gui_main (methods only; no session/widgets yet).
     2. Passed into build_stepper_panels so buttons can wire on_click to methods.
-    3. After the UI exists, bind(StepperContext) copies graph / charts / panels /
+    3. After the UI exists, bind(StepperContext) copies graph / panels /
        stepper onto self via apply_to, then registers on_stepper_change.
     4. Clicks and step changes then use self.panels.* and session state.
 

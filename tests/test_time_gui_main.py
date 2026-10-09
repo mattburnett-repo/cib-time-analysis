@@ -30,7 +30,6 @@ def test_stepper_context_keeps_panels_nested():
         "graph",
         "selected_edge",
         "network_chart",
-        "compare_chart",
         "compare_load_id",
         "stepper",
         "panels",

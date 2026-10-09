@@ -57,8 +57,6 @@ class InspectStep:
     edge_meta: Any
     compare_loading: Any
     compare_loading_label: Any
-    activity_expansion: Any
-    compare_chart_slot: Any
     scroll_container: Any
 
 
@@ -125,10 +123,10 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
                 _build_option_buttons(METHOD_OPTIONS, METHOD_HELP, toggle_analysis)
 
             with ui.card_section():
-                ui.label("Timing parameters").classes("text-subtitle2")
+                ui.label("Set the analysis window").classes("text-subtitle2")
                 with ui.row().classes("items-center gap-4 flex-wrap"):
                     step_size = ui.number(
-                        label="Step size (seconds)",
+                        label="Time step (seconds)",
                         value=300,
                         precision=0,
                         step=1,
@@ -137,10 +135,11 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
                     ).classes("w-40")
                     with step_size:
                         ui.tooltip(
-                            "Time resolution for binning posts. Larger steps build faster and are coarser."
+                            "How far each window moves forward (in seconds). "
+                            "Smaller = finer, slower."
                         )
                     win_size = ui.number(
-                        label="Window size (steps)",
+                        label="Window width (× time step)",
                         value=2,
                         precision=0,
                         step=1,
@@ -149,9 +148,25 @@ def build_configure_step(stepper_controller: Any) -> ConfigureStep:
                     ).classes("w-40")
                     with win_size:
                         ui.tooltip(
-                            "How many steps wide each comparison window is. "
-                            "Window duration ≈ step size × window size."
+                            "How many time steps wide each window is. "
+                            "Width 2 with a 300s time step → 600s windows."
                         )
+                timing_hint = ui.label("").classes("text-body2 text-grey-8 mt-4")
+
+                def _refresh_timing_hint(_=None) -> None:
+                    t_step = max(1, int(step_size.value or 1))
+                    width = max(1, int(win_size.value or 1))
+                    duration = t_step * width
+                    overlap = duration - t_step
+                    timing_hint.set_text(
+                        f"Each window is {duration}s wide. "
+                        f"Windows advance by {t_step}s "
+                        f"(overlap {overlap}s)."
+                    )
+
+                step_size.on_value_change(_refresh_timing_hint)
+                win_size.on_value_change(_refresh_timing_hint)
+                _refresh_timing_hint()
         with ui.stepper_navigation().classes("w-full justify-end"):
             next_configure = ui.button(
                 f"Next: {STEP_BUILD}", on_click=stepper_controller.go_to_build
@@ -287,9 +302,7 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                 on_click=stepper_controller.go_to_inspect,
             ).props("unelevated")
             with inspect_button:
-                ui.tooltip(
-                    "Open posting-activity charts and an interleaved post timeline for the selected pair."
-                )
+                ui.tooltip("Open an interleaved post timeline for the selected pair.")
             inspect_button.disable()
 
     return ExploreStep(
@@ -319,30 +332,8 @@ def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
                     )
                 compare_loading.visible = False
 
-            def _resize_activity_chart(e) -> None:
-                if not e.value:
-                    return
-                chart_holder = getattr(stepper_controller, "compare_chart", None)
-                chart = chart_holder.get("chart") if chart_holder else None
-                if chart is not None:
-                    stepper_controller.schedule_chart_resize(chart)
-
             with ui.card_section().classes("w-full q-pt-none"):
-                with ui.expansion(
-                    "Activity over time",
-                    icon="show_chart",
-                    group="compare",
-                    value=True,
-                    on_value_change=_resize_activity_chart,
-                ).classes("w-full") as activity_expansion:
-                    compare_chart_slot = ui.element("div").classes("w-full")
-                with ui.expansion(
-                    "Interleaved posts",
-                    icon="forum",
-                    group="compare",
-                    value=False,
-                ).classes("w-full"):
-                    scroll_container = ui.scroll_area().classes("w-full h-80")
+                scroll_container = ui.scroll_area().classes("w-full h-80")
 
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
@@ -359,8 +350,6 @@ def build_inspect_step(stepper: Any, stepper_controller: Any) -> InspectStep:
         edge_meta=edge_meta,
         compare_loading=compare_loading,
         compare_loading_label=compare_loading_label,
-        activity_expansion=activity_expansion,
-        compare_chart_slot=compare_chart_slot,
         scroll_container=scroll_container,
     )
 

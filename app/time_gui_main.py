@@ -31,7 +31,6 @@ def main_page():
     graph = MyGraph()
     selected_edge = {"user0": None, "user1": None}
     network_chart = {"chart": None}
-    compare_chart = {"chart": None}
     compare_load_id = {"n": 0}
     stepper_controller = StepperController()
 
@@ -59,7 +58,6 @@ def main_page():
             graph=graph,
             selected_edge=selected_edge,
             network_chart=network_chart,
-            compare_chart=compare_chart,
             compare_load_id=compare_load_id,
             stepper=stepper,
             panels=panels,
