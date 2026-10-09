@@ -11,8 +11,14 @@ from modules.chart_utils import (
     EDGE_COLOR_GROUP_6_10,
     EDGE_COLOR_GROUP_11_20,
     EDGE_COLOR_PAIR,
+    EDGE_GROUP_2_5,
+    EDGE_GROUP_6_10,
+    EDGE_GROUP_11_20,
+    EDGE_GROUP_PAIR,
     NETWORK_CLICK_JS,
+    apply_edge_group_visibility,
     edge_color_for_link,
+    edge_group_for_link,
     edge_is_one_to_one,
     network_hover_clear_labels_js,
     network_hover_show_labels_js,
@@ -74,6 +80,7 @@ def test_plot_subgraph_echart_series_shape():
     assert series[0]["roam"] == "scale"
     assert series[0]["lineStyle"]["width"] == 8
     assert all(">" in link["name"] for link in series[0]["links"])
+    assert all("edgeGroup" in link for link in series[0]["links"])
 
 
 def test_plot_subgraph_echart_colors_by_group_size():
@@ -91,19 +98,43 @@ def test_plot_subgraph_echart_colors_by_group_size():
         for lk in plot_subgraph_echart(g)[0]["links"]
     }
     assert links[frozenset(("a", "b"))]["lineStyle"]["color"] == EDGE_COLOR_PAIR
+    assert links[frozenset(("a", "b"))]["edgeGroup"] == EDGE_GROUP_PAIR
     assert (
         links[frozenset(("h3", "l3_0"))]["lineStyle"]["color"] == EDGE_COLOR_GROUP_2_5
     )
+    assert links[frozenset(("h3", "l3_0"))]["edgeGroup"] == EDGE_GROUP_2_5
     assert (
         links[frozenset(("h7", "l7_0"))]["lineStyle"]["color"] == EDGE_COLOR_GROUP_6_10
     )
+    assert links[frozenset(("h7", "l7_0"))]["edgeGroup"] == EDGE_GROUP_6_10
     assert (
         links[frozenset(("h12", "l12_0"))]["lineStyle"]["color"]
         == EDGE_COLOR_GROUP_11_20
     )
+    assert links[frozenset(("h12", "l12_0"))]["edgeGroup"] == EDGE_GROUP_11_20
     assert edge_color_for_link(g, "h12", "l12_0") == EDGE_COLOR_GROUP_11_20
+    assert edge_group_for_link(g, "h12", "l12_0") == EDGE_GROUP_11_20
     assert edge_is_one_to_one(g, "a", "b")
     assert not edge_is_one_to_one(g, "h3", "l3_0")
+
+
+def test_apply_edge_group_visibility_keeps_nodes_filters_links():
+    series = [
+        {
+            "type": "graph",
+            "data": [{"name": "a"}, {"name": "b"}, {"name": "c"}],
+            "links": [
+                {"source": "a", "target": "b", "edgeGroup": EDGE_GROUP_PAIR},
+                {"source": "b", "target": "c", "edgeGroup": EDGE_GROUP_2_5},
+            ],
+        }
+    ]
+    filtered = apply_edge_group_visibility(series, {EDGE_GROUP_PAIR})
+    assert filtered[0]["data"] == series[0]["data"]
+    assert len(filtered[0]["links"]) == 1
+    assert filtered[0]["links"][0]["edgeGroup"] == EDGE_GROUP_PAIR
+    # Original series is unchanged.
+    assert len(series[0]["links"]) == 2
 
 
 def test_echart_defaults_favor_edge_clicks():

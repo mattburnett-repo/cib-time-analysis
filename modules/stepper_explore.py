@@ -6,7 +6,9 @@ from nicegui import ui
 from nicegui.events import GenericEventArguments
 
 from modules.chart_utils import (
+    ALL_EDGE_GROUPS,
     NETWORK_CLICK_JS,
+    apply_edge_group_visibility,
     network_hover_clear_labels_js,
     network_hover_show_labels_js,
     users_from_edge_payload,
@@ -39,11 +41,38 @@ class StepperExploreMixin:
         edge_select.set_value(None)
         edge_select.enable()
 
+    def visible_edge_groups(self) -> set[str]:
+        checks = getattr(self.panels.explore, "edge_group_checks", None) or {}
+        if not checks:
+            return set(ALL_EDGE_GROUPS)
+        return {key for key, cb in checks.items() if getattr(cb, "value", True)}
+
+    def _series_for_display(self, full_series):
+        if full_series is None:
+            return None
+        return apply_edge_group_visibility(full_series, self.visible_edge_groups())
+
+    def _push_network_series(self, full_series) -> None:
+        """Store full series and push the visibility-filtered view to the chart."""
+        self.network_chart["full_series"] = full_series
+        chart = self.network_chart.get("chart")
+        if chart is None or full_series is None:
+            return
+        chart.options["series"] = self._series_for_display(full_series)
+        chart.update()
+
+    def on_edge_group_visibility_change(self):
+        full = self.network_chart.get("full_series")
+        if full is None:
+            return
+        self._push_network_series(full)
+
     def sync_explore_step_ui(self):
         """Rebuild the network chart after the step becomes visible."""
         explore = self.panels.explore
         explore.network_chart_slot.clear()
         self.network_chart["chart"] = None
+        self.network_chart["full_series"] = None
         if self.graph.graph is None:
             with explore.network_chart_slot:
                 ui.label("Build a graph first to explore the network.").classes(
@@ -53,12 +82,13 @@ class StepperExploreMixin:
             return
 
         # Ensure cut_graph matches the current slider before listing edges.
-        series = self.graph.create_egraph(explore.slider.value)
+        full_series = self.graph.create_egraph(explore.slider.value)
+        display_series = self._series_for_display(full_series)
         self.refresh_edge_select_options()
 
         with explore.network_chart_slot:
             chart = (
-                ui.echart({"series": series, "tooltip": {"show": False}})
+                ui.echart({"series": display_series, "tooltip": {"show": False}})
                 .classes("w-full")
                 .style("display:block; width:100%; min-width:100%; height:420px;")
             )
@@ -76,6 +106,7 @@ class StepperExploreMixin:
                 js_handler=network_hover_clear_labels_js(chart.id),
             )
             self.network_chart["chart"] = chart
+            self.network_chart["full_series"] = full_series
 
         self.schedule_chart_resize(chart)
         explore.slider.enable()
@@ -132,12 +163,11 @@ class StepperExploreMixin:
         return self.select_user_pair(user0, user1, advance=False)
 
     async def handle_slider(self, value):
-        series = self.graph.create_egraph(value)
+        full_series = self.graph.create_egraph(value)
         self.refresh_edge_select_options()
         chart = self.network_chart["chart"]
         if chart is None:
             self.sync_explore_step_ui()
             return
-        chart.options["series"] = series
-        chart.update()
+        self._push_network_series(full_series)
         chart.run_chart_method("resize")

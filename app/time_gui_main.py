@@ -30,7 +30,7 @@ def _print_welcome() -> None:
 def main_page():
     graph = MyGraph()
     selected_edge = {"user0": None, "user1": None}
-    network_chart = {"chart": None}
+    network_chart = {"chart": None, "full_series": None}
     compare_load_id = {"n": 0}
     stepper_controller = StepperController()
 

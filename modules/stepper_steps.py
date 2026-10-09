@@ -46,6 +46,7 @@ class ExploreStep:
     step: Any
     slider: Any
     edge_select: Any
+    edge_group_checks: dict[str, Any]
     network_chart_slot: Any
     inspect_button: Any
 
@@ -286,14 +287,26 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                 ui.label(
                     "Or click a thick line between two users in the network below."
                 ).classes("text-caption text-grey-7 q-mt-sm")
+                edge_group_checks: dict[str, Any] = {}
                 with ui.row().classes("items-center gap-4 q-mt-xs q-mb-sm flex-wrap"):
-                    for color, label in EDGE_COLOR_LEGEND:
+                    for key, color, label in EDGE_COLOR_LEGEND:
                         with ui.row().classes("items-center gap-1"):
+                            cb = ui.checkbox(
+                                value=True,
+                                on_change=lambda _e: (
+                                    stepper_controller.on_edge_group_visibility_change()
+                                ),
+                            ).props("dense")
+                            with cb:
+                                ui.tooltip(
+                                    "Show or hide this edge group on the network graph."
+                                )
                             ui.element("div").style(
                                 f"width:18px;height:4px;border-radius:2px;"
                                 f"background:{color};"
                             )
                             ui.label(label).classes("text-caption text-grey-7")
+                            edge_group_checks[key] = cb
                 network_chart_slot = ui.element("div").classes("w-full")
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
@@ -309,6 +322,7 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
         step=step_explore,
         slider=slider,
         edge_select=edge_select,
+        edge_group_checks=edge_group_checks,
         network_chart_slot=network_chart_slot,
         inspect_button=inspect_button,
     )

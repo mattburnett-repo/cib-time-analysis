@@ -63,6 +63,7 @@ def _panels():
             step=_widget(),
             slider=_widget(value=10),
             edge_select=_widget(options={}),
+            edge_group_checks={},
             network_chart_slot=_widget(),
             inspect_button=_widget(),
         ),
@@ -95,7 +96,7 @@ def controller():
     ctx = StepperContext(
         graph=graph,
         selected_edge={"user0": None, "user1": None},
-        network_chart={"chart": None},
+        network_chart={"chart": None, "full_series": None},
         compare_load_id={"n": 0},
         stepper=stepper,
         panels=_panels(),
@@ -352,14 +353,59 @@ async def test_handle_slider_updates_existing_chart(controller):
     chart = _widget(options={"series": []})
     controller.network_chart["chart"] = chart
     controller.graph.cut_graph = _weighted_graph()
-    series = [{"type": "graph", "links": [1, 2]}]
+    series = [
+        {
+            "type": "graph",
+            "data": [{"name": "a", "id": "a"}, {"name": "b", "id": "b"}],
+            "links": [
+                {
+                    "source": "a",
+                    "target": "b",
+                    "edgeGroup": "pair",
+                    "lineStyle": {"color": "#B0B7C3"},
+                }
+            ],
+        }
+    ]
     controller.graph.create_egraph.return_value = series
 
     await controller.handle_slider(25)
 
-    assert chart.options["series"] == series
+    assert chart.options["series"][0]["links"] == series[0]["links"]
+    assert controller.network_chart["full_series"] == series
     chart.update.assert_called()
     chart.run_chart_method.assert_called_with("resize")
+
+
+def test_on_edge_group_visibility_change_filters_links(controller):
+    from modules.chart_utils import EDGE_GROUP_2_5, EDGE_GROUP_PAIR
+
+    chart = _widget(options={"series": []})
+    full = [
+        {
+            "type": "graph",
+            "data": [{"name": "a"}, {"name": "b"}, {"name": "c"}],
+            "links": [
+                {"source": "a", "target": "b", "edgeGroup": EDGE_GROUP_PAIR},
+                {"source": "b", "target": "c", "edgeGroup": EDGE_GROUP_2_5},
+            ],
+        }
+    ]
+    controller.network_chart["chart"] = chart
+    controller.network_chart["full_series"] = full
+    controller.panels.explore.edge_group_checks = {
+        EDGE_GROUP_PAIR: _widget(value=True),
+        EDGE_GROUP_2_5: _widget(value=False),
+        "g6_10": _widget(value=True),
+        "g11_20": _widget(value=True),
+    }
+
+    controller.on_edge_group_visibility_change()
+
+    links = chart.options["series"][0]["links"]
+    assert len(links) == 1
+    assert links[0]["edgeGroup"] == EDGE_GROUP_PAIR
+    assert chart.options["series"][0]["data"] == full[0]["data"]
 
 
 @patch("modules.stepper_nav.ui.timer")

@@ -7,17 +7,25 @@ NODE_LABEL_FONT_SIZE = 14
 
 # Edge colors on the displayed (cut) graph, by max endpoint degree N:
 # Grey for 1:1 (distinct from default ECharts node blue); warmer colors as N grows.
+EDGE_GROUP_PAIR = "pair"
+EDGE_GROUP_2_5 = "g2_5"
+EDGE_GROUP_6_10 = "g6_10"
+EDGE_GROUP_11_20 = "g11_20"
+
 EDGE_COLOR_PAIR = "#B0B7C3"  # N == 1 (light grey)
 EDGE_COLOR_GROUP_2_5 = "#1B9E77"  # 2 <= N <= 5 (teal/green)
 EDGE_COLOR_GROUP_6_10 = "#D7268A"  # 6 <= N <= 10 (magenta)
 EDGE_COLOR_GROUP_11_20 = "#8B2E8B"  # N >= 11 (incl. >20)
 
+# (group_key, color, label) — keys used for visibility toggles.
 EDGE_COLOR_LEGEND = (
-    (EDGE_COLOR_PAIR, "1:1 pair"),
-    (EDGE_COLOR_GROUP_2_5, "Group of 2–5"),
-    (EDGE_COLOR_GROUP_6_10, "Group of 6–10"),
-    (EDGE_COLOR_GROUP_11_20, "Group of 11–20"),
+    (EDGE_GROUP_PAIR, EDGE_COLOR_PAIR, "1:1 pair"),
+    (EDGE_GROUP_2_5, EDGE_COLOR_GROUP_2_5, "Group of 2–5"),
+    (EDGE_GROUP_6_10, EDGE_COLOR_GROUP_6_10, "Group of 6–10"),
+    (EDGE_GROUP_11_20, EDGE_COLOR_GROUP_11_20, "Group of 11–20"),
 )
+
+ALL_EDGE_GROUPS = frozenset(key for key, _color, _label in EDGE_COLOR_LEGEND)
 
 ECHART_GRAPH_DEFAULTS = {
     "type": "graph",
@@ -166,16 +174,42 @@ def edge_is_one_to_one(G: nx.Graph, u, v) -> bool:
     return G.degree[u] == 1 and G.degree[v] == 1
 
 
-def edge_color_for_link(G: nx.Graph, u, v) -> str:
-    """Color by max endpoint degree on the displayed graph."""
+def edge_group_for_link(G: nx.Graph, u, v) -> str:
+    """Group key by max endpoint degree on the displayed graph."""
     n = max(G.degree[u], G.degree[v])
     if n <= 1:
-        return EDGE_COLOR_PAIR
+        return EDGE_GROUP_PAIR
     if n <= 5:
-        return EDGE_COLOR_GROUP_2_5
+        return EDGE_GROUP_2_5
     if n <= 10:
-        return EDGE_COLOR_GROUP_6_10
+        return EDGE_GROUP_6_10
+    return EDGE_GROUP_11_20
+
+
+def edge_color_for_link(G: nx.Graph, u, v) -> str:
+    """Color by max endpoint degree on the displayed graph."""
+    group = edge_group_for_link(G, u, v)
+    for key, color, _label in EDGE_COLOR_LEGEND:
+        if key == group:
+            return color
     return EDGE_COLOR_GROUP_11_20
+
+
+def apply_edge_group_visibility(
+    series: list, visible_groups: set[str] | frozenset[str]
+):
+    """Return a series copy with only links whose edgeGroup is visible.
+
+    Nodes are unchanged so layout context remains when groups are toggled off.
+    """
+    if not series:
+        return series
+    out = []
+    for s in series:
+        links = s.get("links") or []
+        filtered = [lk for lk in links if lk.get("edgeGroup") in visible_groups]
+        out.append({**s, "links": filtered})
+    return out
 
 
 def plot_subgraph_echart(G: nx.Graph):
@@ -185,12 +219,14 @@ def plot_subgraph_echart(G: nx.Graph):
     for edge in G.edges():
         u, v = edge[0], edge[1]
         weight = G.edges[edge].get("norm_weight", 1.0)
+        group = edge_group_for_link(G, u, v)
         links.append(
             {
                 "source": u,
                 "target": v,
                 "name": f"{u} > {v}",
                 "value": float(weight),
+                "edgeGroup": group,
                 "lineStyle": {"color": edge_color_for_link(G, u, v)},
             }
         )
