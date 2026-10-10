@@ -93,3 +93,4 @@ Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), an
 - Decide how to handle graphs with multiple edges. Right now the app only allows a 1:1 edge. We need to figure out how to handle N:1 / N:M graphs.
 - Bring this repo's code structure / organization in line with the existing analyzer / test modules in the CIBMT repo.
 - Use Kartik's CSS abstractions instead of literal Tailwind classes.
+- Create slidedeck per Kris's suggestion, using [this](https://civictechdc.github.io/cib-mango-tree/guides/contributing/new_contributor_guide/#designing-a-test) as a guide.
