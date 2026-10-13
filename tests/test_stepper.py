@@ -65,6 +65,8 @@ def _panels():
             edge_select=_widget(options={}),
             edge_group_checks={},
             network_chart_slot=_widget(),
+            graph_title=_widget(),
+            selection_label=_widget(),
             inspect_button=_widget(),
         ),
         inspect=InspectStep(
@@ -223,6 +225,9 @@ async def test_select_user_pair_updates_state(controller):
 
     assert controller.selected_edge == {"user0": "alice", "user1": "bob"}
     controller.panels.explore.edge_select.set_value.assert_called_with("alice\tbob")
+    controller.panels.explore.selection_label.set_text.assert_called_with(
+        "Users Selected: alice and bob"
+    )
     controller.panels.explore.inspect_button.enable.assert_called()
 
 

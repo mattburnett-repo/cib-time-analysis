@@ -48,6 +48,8 @@ class ExploreStep:
     edge_select: Any
     edge_group_checks: dict[str, Any]
     network_chart_slot: Any
+    graph_title: Any
+    selection_label: Any
     inspect_button: Any
 
 
@@ -234,23 +236,33 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
 
 
 # Mark: Explore network
+def _slider_top_pairs_text(n: int) -> str:
+    return f"Display the top {int(n)} most strongly linked pairs."
+
+
 def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
     with ui.step(STEP_EXPLORE, icon="account_tree") as step_explore:
         ui.label(
-            "Pick a link between two users. Next you will compare their "
-            "posting timelines and read their posts together."
-        ).classes("text-body2 text-grey-8 q-mb-sm")
+            "Select a linked pair of users from the dropdown list or from the graph"
+        ).classes("text-subtitle1 text-weight-medium q-mb-xs")
+        ui.label(
+            "In the next step you will compare the two selected users' posting "
+            "activity to determine if there is coordinated behavior."
+        ).classes("text-body2 text-grey-8 q-mb-md")
+
         with ui.card().classes("w-full"):
             with ui.card_section().classes("w-full"):
-                with ui.row().classes("items-center gap-2"):
-                    ui.label("Top edges to show").classes("text-subtitle2")
-                    with ui.icon("info", size="xs").classes("text-grey-6 cursor-help"):
-                        ui.tooltip(
-                            "Only the strongest N links are drawn. Raise this to see more of the network."
-                        )
+                slider_caption = ui.label(_slider_top_pairs_text(10)).classes(
+                    "text-subtitle2"
+                )
+                ui.label(
+                    "The strength of the linked pairs is determined by how often "
+                    "they post in the same time windows, normalized by activity "
+                    "in those windows."
+                ).classes("text-caption text-grey-7 q-mt-xs")
                 slider = (
                     ui.slider(min=10, max=100, value=10)
-                    .classes("w-full")
+                    .classes("w-full q-mt-sm")
                     .on(
                         "update:model-value",
                         lambda e: stepper_controller.handle_slider(e.args),
@@ -260,58 +272,104 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                 )
                 with slider:
                     ui.tooltip(
-                        "Drag to change how many top-weighted edges appear in the graph."
+                        "Drag to change how many top-weighted links appear in the graph."
                     )
                 slider.disable()
-                slider_value_label = ui.label("10 edges").classes(
-                    "text-caption text-grey-7 text-center w-full"
-                )
                 slider.on_value_change(
-                    lambda e: slider_value_label.set_text(f"{int(e.value)} edges")
+                    lambda e: slider_caption.set_text(_slider_top_pairs_text(e.value))
                 )
-            with ui.card_section().classes("w-full"):
-                ui.label("Choose a user link").classes("text-subtitle2")
+
+        with ui.row().classes("w-full items-stretch gap-4 q-mt-md flex-wrap"):
+            with (
+                ui.column()
+                .classes("gap-3")
+                .style("flex:1 1 220px; min-width:200px; max-width:320px;")
+            ):
                 edge_select = ui.select(
                     options={},
-                    label="Click here to select a connection",
+                    label="Select a pair of users",
                     with_input=True,
                 ).classes("w-full")
                 with edge_select:
                     ui.tooltip(
-                        f"Pick two linked users from the list. This is the most reliable way to open {STEP_INSPECT}."
+                        f"Pick two linked users from the list. "
+                        f"This is the most reliable way to open {STEP_INSPECT}."
                     )
                 edge_select.disable()
                 edge_select.on_value_change(
                     lambda e: stepper_controller.on_edge_selected_from_list(e.value)
                 )
-                ui.label(
-                    "Or click a thick line between two users in the network below."
-                ).classes("text-caption text-grey-7 q-mt-sm")
-                edge_group_checks: dict[str, Any] = {}
-                with ui.row().classes("items-center gap-4 q-mt-xs q-mb-sm flex-wrap"):
-                    for key, color, label in EDGE_COLOR_LEGEND:
-                        with ui.row().classes("items-center gap-1"):
-                            cb = ui.checkbox(
-                                value=True,
-                                on_change=lambda _e: (
-                                    stepper_controller.on_edge_group_visibility_change()
-                                ),
-                            ).props("dense")
-                            with cb:
-                                ui.tooltip(
-                                    "Show or hide this edge group on the network graph."
-                                )
+
+                with ui.card().classes("w-full"):
+                    with ui.card_section():
+                        ui.label("How to read the graph").classes(
+                            "text-subtitle2 q-mb-sm"
+                        )
+                        with ui.row().classes("items-start gap-2 q-mb-sm"):
                             ui.element("div").style(
-                                f"width:18px;height:4px;border-radius:2px;"
-                                f"background:{color};"
+                                "width:12px;height:12px;border-radius:50%;"
+                                "background:#5470C6;margin-top:4px;flex-shrink:0;"
                             )
-                            ui.label(label).classes("text-caption text-grey-7")
-                            edge_group_checks[key] = cb
-                network_chart_slot = ui.element("div").classes("w-full")
-        with ui.stepper_navigation().classes("w-full justify-between"):
+                            ui.label(
+                                "Each node represents a specific user account "
+                                "from your dataset."
+                            ).classes("text-caption text-grey-8")
+                        with ui.row().classes("items-start gap-2"):
+                            ui.element("div").style(
+                                "width:18px;height:3px;border-radius:2px;"
+                                "background:#B0B7C3;margin-top:8px;flex-shrink:0;"
+                            )
+                            ui.label(
+                                "Lines (edges) link accounts with similarly timed "
+                                "posting activity. Edge color shows group size "
+                                "(see filters on the graph)."
+                            ).classes("text-caption text-grey-8")
+
+            with ui.column().classes("gap-2").style("flex:3 1 360px; min-width:280px;"):
+                ui.label(
+                    "Or select by clicking on a line connecting any two nodes."
+                ).classes("text-body2 text-grey-8")
+                with ui.card().classes("w-full"):
+                    with ui.card_section().classes("w-full"):
+                        graph_title = ui.label("SLIDING WINDOW ANALYSIS GRAPH").classes(
+                            "text-subtitle2 text-weight-medium text-center w-full q-mb-sm"
+                        )
+                        ui.label("Filter by group size.").classes(
+                            "text-caption text-grey-7 q-mb-xs"
+                        )
+                        edge_group_checks: dict[str, Any] = {}
+                        with ui.row().classes(
+                            "items-center gap-4 q-mb-sm flex-wrap justify-center"
+                        ):
+                            for key, color, label in EDGE_COLOR_LEGEND:
+                                with ui.row().classes("items-center gap-1"):
+                                    cb = ui.checkbox(
+                                        value=True,
+                                        on_change=lambda _e: (
+                                            stepper_controller.on_edge_group_visibility_change()
+                                        ),
+                                    ).props("dense")
+                                    with cb:
+                                        ui.tooltip(
+                                            "Show or hide this edge group on the network graph."
+                                        )
+                                    ui.element("div").style(
+                                        f"width:18px;height:4px;border-radius:2px;"
+                                        f"background:{color};"
+                                    )
+                                    ui.label(label).classes("text-caption text-grey-7")
+                                    edge_group_checks[key] = cb
+                        network_chart_slot = ui.element("div").classes("w-full")
+
+        with ui.stepper_navigation().classes(
+            "w-full items-center justify-between gap-3"
+        ):
             ui.button("Back", on_click=stepper.previous).props("flat")
+            selection_label = ui.label("Users Selected: —").classes(
+                "text-body2 text-grey-8 text-center flex-grow"
+            )
             inspect_button = ui.button(
-                "Compare these users",
+                "Next Step: Compare Users",
                 on_click=stepper_controller.go_to_inspect,
             ).props("unelevated")
             with inspect_button:
@@ -324,6 +382,8 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
         edge_select=edge_select,
         edge_group_checks=edge_group_checks,
         network_chart_slot=network_chart_slot,
+        graph_title=graph_title,
+        selection_label=selection_label,
         inspect_button=inspect_button,
     )
 

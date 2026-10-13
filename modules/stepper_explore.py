@@ -13,6 +13,7 @@ from modules.chart_utils import (
     network_hover_show_labels_js,
     users_from_edge_payload,
 )
+from modules.timeseries_gui_config import METHOD_OPTIONS
 
 
 class StepperExploreMixin:
@@ -29,17 +30,51 @@ class StepperExploreMixin:
         for delay in delays:
             ui.timer(delay, _resize, once=True)
 
+    def _set_selection_label(self, user0: str | None, user1: str | None) -> None:
+        label = getattr(self.panels.explore, "selection_label", None)
+        if label is None:
+            return
+        if user0 and user1:
+            label.set_text(f"Users Selected: {user0} and {user1}")
+        else:
+            label.set_text("Users Selected: —")
+
+    def _set_graph_title(self) -> None:
+        title = getattr(self.panels.explore, "graph_title", None)
+        if title is None:
+            return
+        method = METHOD_OPTIONS.get(
+            self.panels.configure.toggle_analysis.value, "Sliding Window"
+        )
+        title.set_text(f"{method.upper()} ANALYSIS GRAPH")
+
     def refresh_edge_select_options(self):
-        edge_select = self.panels.explore.edge_select
+        explore = self.panels.explore
+        edge_select = explore.edge_select
         if self.graph.cut_graph is None:
             edge_select.set_options({})
             edge_select.set_value(None)
             edge_select.disable()
+            self.selected_edge["user0"] = None
+            self.selected_edge["user1"] = None
+            self._set_selection_label(None, None)
+            explore.inspect_button.disable()
             return
         options = {f"{u}\t{v}": f"{u}  ↔  {v}" for u, v in self.graph.cut_graph.edges()}
         edge_select.set_options(options)
         edge_select.set_value(None)
         edge_select.enable()
+        u0 = self.selected_edge.get("user0")
+        u1 = self.selected_edge.get("user1")
+        if u0 and u1 and (f"{u0}\t{u1}" in options or f"{u1}\t{u0}" in options):
+            self._sync_edge_select_value(u0, u1)
+            self._set_selection_label(u0, u1)
+            explore.inspect_button.enable()
+        else:
+            self.selected_edge["user0"] = None
+            self.selected_edge["user1"] = None
+            self._set_selection_label(None, None)
+            explore.inspect_button.disable()
 
     def visible_edge_groups(self) -> set[str]:
         checks = getattr(self.panels.explore, "edge_group_checks", None) or {}
@@ -73,12 +108,14 @@ class StepperExploreMixin:
         explore.network_chart_slot.clear()
         self.network_chart["chart"] = None
         self.network_chart["full_series"] = None
+        self._set_graph_title()
         if self.graph.graph is None:
             with explore.network_chart_slot:
                 ui.label("Build a graph first to explore the network.").classes(
                     "text-body2 text-grey-7"
                 )
             explore.edge_select.disable()
+            self._set_selection_label(None, None)
             return
 
         # Ensure cut_graph matches the current slider before listing edges.
@@ -131,6 +168,7 @@ class StepperExploreMixin:
         self.selected_edge["user0"] = user0
         self.selected_edge["user1"] = user1
         self._sync_edge_select_value(user0, user1)
+        self._set_selection_label(user0, user1)
         explore.inspect_button.enable()
         if advance:
             self.go_to_inspect()
@@ -147,6 +185,7 @@ class StepperExploreMixin:
             self.selected_edge["user0"] == user1
             and self.selected_edge["user1"] == user0
         ):
+            self._set_selection_label(user0, user1)
             self.panels.explore.inspect_button.enable()
             return
         return self.select_user_pair(user0, user1, advance=False)
@@ -156,7 +195,7 @@ class StepperExploreMixin:
         if users is None:
             if isinstance(e.args, dict) and e.args.get("dataType") == "node":
                 ui.notify(
-                    "Click a connecting line between two users, or use the list above."
+                    "Click a connecting line between two users, or use the list on the left."
                 )
             return
         user0, user1 = users
