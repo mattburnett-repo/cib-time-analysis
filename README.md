@@ -88,6 +88,7 @@ Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), an
 
 ## To Do
 
+- Needs some kind of "save results" / parquet functionality.
 - Use pyproject.toml / uv, instead of pip ---
 - Make sure that different tests/analyses produce expected results. Right now, all tests/analyses appear to produce the same result(s).
 - Decide how to better handle graphs with multiple edges. Right now the app color codes 1:1 and N:1 graphs; currently no support for N:M grapohs. We need to continue refining the graphs in response to user feedback.
