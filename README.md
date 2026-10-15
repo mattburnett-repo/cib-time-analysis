@@ -88,6 +88,7 @@ Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), an
 
 ## To Do
 
+- Dynamic Time Warp (DTW) method has serious memory exhaustion issues. We need to come to a consensus about how to handle this.
 - Needs some kind of "save results" / parquet functionality.
 - Use pyproject.toml / uv, instead of pip ---
 - Make sure that different tests/analyses produce expected results. Right now, all tests/analyses appear to produce the same result(s).
