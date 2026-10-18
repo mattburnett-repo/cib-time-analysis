@@ -64,19 +64,19 @@ Without it, the **Truth Social Vax** dataset option will fail when you try to bu
 
 ## Layout
 
-| Path                               | Role                                                       |
-| ---------------------------------- | ---------------------------------------------------------- |
-| `app/time_gui_main.py`             | NiceGUI page: builds widgets and binds `StepperController` |
-| `app/time_analysis.py`             | Core similarity / graph-building algorithms                |
-| `modules/my_graph.py`              | Session graph holder (`MyGraph`) and weight cutting        |
-| `modules/chart_utils.py`           | ECharts defaults, click JS, edge/node payload helpers      |
+| Path                               | Role                                                        |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `app/time_gui_main.py`             | NiceGUI page: builds widgets and binds `StepperController`  |
+| `app/time_analysis.py`             | Core similarity / graph-building algorithms                 |
+| `modules/my_graph.py`              | Session graph holder (`MyGraph`) and weight cutting         |
+| `modules/chart_utils.py`           | ECharts defaults, click JS, edge/node payload helpers       |
 | `modules/stepper.py`               | `StepperController` facade (nav / explore / compare mixins) |
-| `modules/stepper_nav.py`           | Configure→Build navigation and unlock rules                |
-| `modules/stepper_explore.py`       | Explore charts and edge selection                          |
-| `modules/stepper_compare.py`       | Compare-users loading                                      |
-| `modules/session.py`               | Typed `StepperContext` passed into `bind()`                |
-| `modules/timeseries_gui_config.py` | Dataset / method labels and CSV column maps                |
-| `tests/`                           | Pytest suite (`./runtests.sh`)                             |
+| `modules/stepper_nav.py`           | Configure→Build navigation and unlock rules                 |
+| `modules/stepper_explore.py`       | Explore charts and edge selection                           |
+| `modules/stepper_compare.py`       | Compare-users loading                                       |
+| `modules/session.py`               | Typed `StepperContext` passed into `bind()`                 |
+| `modules/timeseries_gui_config.py` | Dataset / method labels and CSV column maps                 |
+| `tests/`                           | Pytest suite (`./runtests.sh`)                              |
 
 ## Tests
 
@@ -88,11 +88,12 @@ Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), an
 
 ## To Do
 
-- Dynamic Time Warp (DTW) method has serious memory exhaustion issues. We need to come to a consensus about how to handle this.
-- Needs some kind of "save results" / parquet functionality.
+- Should have a way to extract / pull out / save "nodes of interest" (Ben S. refers to this as the "naughty list").
+- Needs some kind of general "save results" / parquet functionality, similar to existing analyzers.
 - Use pyproject.toml / uv, instead of pip ---
 - Make sure that different tests/analyses produce expected results. Right now, all tests/analyses appear to produce the same result(s).
 - Decide how to better handle graphs with multiple edges. Right now the app color codes 1:1 and N:1 graphs; currently no support for N:M grapohs. We need to continue refining the graphs in response to user feedback.
+- Modify edges to indicate frequency of overlapping posts. Current the graphs only display overlap, without any indication of how many overlapping posts exist between two nodes.
 - Bring this repo's code structure / organization in line with the existing analyzer / test modules in the CIBMT repo.
 - Use Kartik's CSS abstractions instead of literal Tailwind classes.
 - Create slidedeck per Kris's suggestion, using [this](https://civictechdc.github.io/cib-mango-tree/guides/contributing/new_contributor_guide/#designing-a-test) as a guide.
