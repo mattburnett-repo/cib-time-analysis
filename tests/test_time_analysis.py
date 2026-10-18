@@ -24,7 +24,6 @@ def test_gui_config_keys_align_with_datasets_and_methods():
         time_analysis.sliding_window,
         time_analysis.ado_window,
         time_analysis.time_overlap,
-        time_analysis.dynamic_time_window,
     ]
 
 
@@ -175,15 +174,3 @@ def test_time_overlap_with_low_min_posts(sample_csv, progress):
     assert isinstance(graph, nx.Graph)
     assert set(graph.nodes) == {"alice", "bob", "carol"}
     assert graph.number_of_edges() >= 1
-
-
-def test_dynamic_time_window_with_low_min_posts(sample_csv, progress):
-    graph = time_analysis.dynamic_time_window(
-        sample_csv, progress, win_size=2, t_step=1, min_posts=1
-    )
-
-    assert isinstance(graph, nx.Graph)
-    assert graph.number_of_nodes() == 3
-    assert graph.number_of_edges() >= 1
-    for _, _, data in graph.edges(data=True):
-        assert data["norm_weight"] > 0

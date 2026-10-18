@@ -6,13 +6,11 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from dateutil import parser
-from dtw import dtw
 
 from modules.timeseries_gui_config import DatasetSpec
 
 DEFAULT_MIN_POSTS = 20
 MIN_OVERLAP = 1e-5
-DTW_ZERO_DISTANCE = 1e-12
 PROGRESS_EVERY_N_POSTS = 100
 PROGRESS_EVERY_N_USERS = 10
 
@@ -292,55 +290,8 @@ def time_overlap(
     return H
 
 
-def dynamic_time_window(
-    data_set,
-    managed_progress_value,
-    win_size=2,
-    t_step=60,
-    min_posts=DEFAULT_MIN_POSTS,
-):
-    dataset, csv_df, _time_data = _load_dataset(data_set)
-    user_col_name = dataset.user_col_name
-    # Window limits DTW search; without it this method is impractically slow.
-    dt = int(win_size * t_step)
-    D = nx.Graph()
-
-    with _timed():
-        users = _precompute_user_nodes(
-            D,
-            csv_df,
-            user_col_name,
-            t_step=t_step,
-            min_posts=min_posts,
-            progress=managed_progress_value,
-        )
-        for ii in range(len(users)):
-            if ii % PROGRESS_EVERY_N_USERS == 0:
-                print(f"Processing user {ii}/{len(users)}")
-                managed_progress_value.value = ii / len(users)
-            iuser = users[ii]
-            itvec = D.nodes[iuser]["tvec"]
-
-            for jj in range(ii + 1, len(users)):
-                juser = users[jj]
-                jtvec = D.nodes[juser]["tvec"]
-                alignment = dtw(
-                    itvec.astype(float),
-                    jtvec.astype(float),
-                    window_type="sakoechiba",
-                    window_args={"window_size": 2 * dt},
-                )
-                w = alignment.distance
-                if w == 0:
-                    w = DTW_ZERO_DISTANCE
-                D.add_edge(iuser, juser, norm_weight=1 / w, weight=1 / w)
-
-    return D
-
-
 METHODS = [
     sliding_window,
     ado_window,
     time_overlap,
-    dynamic_time_window,
 ]

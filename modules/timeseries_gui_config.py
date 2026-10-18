@@ -49,14 +49,12 @@ METHOD_OPTIONS = {
     0: "Sliding Window",
     1: "Action Driven Overlapping Window",
     2: "Time Overlap",
-    3: "Dynamic Time Warping",
 }
 
 METHOD_HELP = {
     0: "Compare activity in fixed time windows that slide across the timeline. Usually the fastest method.",
     1: "ADO: windows are centered on each user's posts, then overlaps with other users are scored.",
     2: "Score user pairs by how much their active posting periods overlap after smoothing.",
-    3: "DTW: align posting-time patterns even if they are shifted or stretched. Often the slowest method.",
 }
 
 # NiceGUI stepper values — must match ui.step(...) labels.
