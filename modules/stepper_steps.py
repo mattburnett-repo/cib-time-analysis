@@ -1,4 +1,8 @@
-"""NiceGUI stepper step panels for the time-analysis UI."""
+"""NiceGUI stepper step panels for the time-analysis UI.
+
+Build graph shows one bar for each phase the background job reports: reading
+the file, building the graph, and finding the strongest links.
+"""
 
 from __future__ import annotations
 
@@ -12,8 +16,12 @@ from modules.chart_utils import EDGE_COLOR_LEGEND
 from modules.timeseries_gui_config import (
     DATASET_HELP,
     DATASET_OPTIONS,
+    EXPLORE_MAX_PAIRS,
     METHOD_HELP,
     METHOD_OPTIONS,
+    PHASE_BUILDING,
+    PHASE_RANKING,
+    PHASE_READING,
     STEP_BUILD,
     STEP_CONFIGURE,
     STEP_EXPLORE,
@@ -36,6 +44,9 @@ class BuildStep:
     intro_label: Any
     config_summary: Any
     progress: Any
+    read_progress: Any
+    graph_progress: Any
+    links_progress: Any
     status_label: Any
     create_button: Any
     next_from_build: Any
@@ -194,11 +205,27 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
                 "Run the analysis. This can take a while on larger datasets."
             ).classes("text-body2 text-grey-8 text-center")
             config_summary = ui.label("").classes("text-body2 text-center")
-            progress = (
-                ui.linear_progress(value=0)
-                .props("instant-feedback")
-                .classes("w-full max-w-md")
-            )
+            with ui.column().classes("w-full max-w-md gap-3") as progress:
+                ui.label("Reading the datafile...").classes("text-caption text-grey-8")
+                read_progress = (
+                    ui.linear_progress(value=0)
+                    .props("instant-feedback")
+                    .classes("w-full")
+                )
+                ui.label("Building the graph…").classes("text-caption text-grey-8")
+                graph_progress = (
+                    ui.linear_progress(value=0)
+                    .props("instant-feedback")
+                    .classes("w-full")
+                )
+                ui.label("Finding the strongest links...").classes(
+                    "text-caption text-grey-8"
+                )
+                links_progress = (
+                    ui.linear_progress(value=0)
+                    .props("instant-feedback")
+                    .classes("w-full")
+                )
             progress.visible = False
             status_label = ui.label("Ready when you are.").classes(
                 "text-caption text-grey-7"
@@ -210,10 +237,21 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
                 ui.tooltip(
                     "Run the selected analysis. Large datasets can take a while."
                 )
-        ui.timer(
-            0.1,
-            callback=lambda: progress.set_value(graph.managed_progress_value.value),
-        )
+
+        def _sync_build_progress() -> None:
+            phase = graph.build_phase.value
+            value = graph.managed_progress_value.value
+            if phase == PHASE_READING:
+                read_progress.set_value(value)
+            elif phase == PHASE_BUILDING:
+                read_progress.set_value(1)
+                graph_progress.set_value(value)
+            elif phase == PHASE_RANKING:
+                read_progress.set_value(1)
+                graph_progress.set_value(1)
+                links_progress.set_value(value)
+
+        ui.timer(0.1, callback=_sync_build_progress)
         with ui.stepper_navigation().classes("w-full justify-between"):
             ui.button("Back", on_click=stepper.previous).props("flat")
             next_from_build = ui.button(
@@ -229,6 +267,9 @@ def build_build_step(stepper: Any, stepper_controller: Any, graph: Any) -> Build
         intro_label=intro_label,
         config_summary=config_summary,
         progress=progress,
+        read_progress=read_progress,
+        graph_progress=graph_progress,
+        links_progress=links_progress,
         status_label=status_label,
         create_button=create_button,
         next_from_build=next_from_build,
@@ -261,7 +302,7 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                     "in those windows."
                 ).classes("text-caption text-grey-7 q-mt-xs")
                 slider = (
-                    ui.slider(min=10, max=100, value=10)
+                    ui.slider(min=10, max=EXPLORE_MAX_PAIRS, value=10)
                     .classes("w-full q-mt-sm")
                     .on(
                         "update:model-value",
@@ -270,6 +311,9 @@ def build_explore_step(stepper: Any, stepper_controller: Any) -> ExploreStep:
                         leading_events=False,
                     )
                 )
+                with ui.row().classes("w-full justify-between"):
+                    ui.label("10").classes("text-caption text-grey-7")
+                    ui.label(str(EXPLORE_MAX_PAIRS)).classes("text-caption text-grey-7")
                 with slider:
                     ui.tooltip(
                         "Drag to change how many top-weighted links appear in the graph."

@@ -1,9 +1,14 @@
-"""Session graph state and weight-based graph cutting."""
+"""Session graph state and weight-based graph cutting.
+
+Build graph ranks the strongest links once, inside the background job, and
+stores that list on the graph. Explore network slices the list down to the
+slider value. The page thread does not rank or copy the full edge set when
+the chart is drawn or the slider moves.
+"""
 
 from multiprocessing import Manager
 
 import networkx as nx
-import numpy as np
 from nicegui import run, ui
 
 from app.time_analysis import (
@@ -13,22 +18,73 @@ from app.time_analysis import (
     read_csv,
 )
 from modules.chart_utils import plot_subgraph_echart
-from modules.timeseries_gui_config import DATASETS
+from modules.timeseries_gui_config import (
+    DATASETS,
+    EXPLORE_MAX_PAIRS,
+    PHASE_IDLE,
+    PHASE_RANKING,
+    PHASE_READING,
+)
+
+# Stored on the graph during Build so Explore can slice links without copying it.
+TOP_EDGES_KEY = "top_edges"
+RANK_PROGRESS_EVERY = 5000
+
+
+def ranked_edges(G, limit):
+    """Strongest edges first, capped at limit. Does not copy G."""
+    ranked = sorted(
+        G.edges(data=True),
+        key=lambda edge: edge[2].get("norm_weight", 0.0),
+        reverse=True,
+    )
+    return ranked[:limit]
+
+
+def remember_top_edges(G, limit=EXPLORE_MAX_PAIRS, progress=None):
+    """Store the strongest links on ``G`` before Build returns to the page.
+
+    Explore reads this list. Ranking here keeps that work off the page thread.
+    """
+    total = G.number_of_edges()
+    scanned = []
+    for i, (u, v, data) in enumerate(G.edges(data=True), start=1):
+        scanned.append((data.get("norm_weight", 0.0), u, v, data))
+        if progress is not None and total and i % RANK_PROGRESS_EVERY == 0:
+            progress.value = i / total
+    scanned.sort(key=lambda item: item[0], reverse=True)
+    G.graph[TOP_EDGES_KEY] = [(u, v, data) for _weight, u, v, data in scanned[:limit]]
+    if progress is not None:
+        progress.value = 1.0
+    return G
+
+
+def build_ranked_graph(method, dataset, progress, phase, win_size, t_step):
+    """Run one analysis method, then store the links Explore will display.
+
+    ``phase`` moves from reading the file, to building the graph, to ranking
+    links. The page timer uses that to drive the three progress bars.
+    """
+    phase.value = PHASE_READING
+    progress.value = 0.0
+    graph = method(dataset, progress, win_size, t_step, phase=phase)
+    phase.value = PHASE_RANKING
+    progress.value = 0.0
+    return remember_top_edges(graph, progress=progress)
 
 
 def cut_graph_by_weight(G, num_top):
-    weights = np.array([wt for u, v, wt in G.edges.data("norm_weight")])
-    thresh = np.sort(weights)[-num_top] if num_top <= len(weights) else 0
-    Hcut = nx.Graph(G)
-    for u, v, wt in list(Hcut.edges.data("norm_weight")):
-        if wt < thresh:
-            Hcut.remove_edge(u, v)
+    """Build a small graph of the strongest ``num_top`` links.
 
-    for node in list(Hcut.nodes):
-        if Hcut.degree[node] < 1:
-            Hcut.remove_node(node)
-
-    return Hcut
+    Slices the list ``remember_top_edges`` stored during Build. Graphs from
+    tests have no list, so those are ranked here.
+    """
+    ranked = G.graph.get(TOP_EDGES_KEY)
+    chosen = ranked[:num_top] if ranked is not None else ranked_edges(G, num_top)
+    cut = nx.Graph()
+    for u, v, data in chosen:
+        cut.add_edge(u, v, **data)
+    return cut
 
 
 class MyGraph:
@@ -38,6 +94,7 @@ class MyGraph:
         self.current_set = None
         self.cut_graph = None
         self.managed_progress_value = Manager().Value("d", 0.0)
+        self.build_phase = Manager().Value("i", PHASE_IDLE)
         # Cached (DatasetSpec, DataFrame) for Compare; invalidated on rebuild.
         self._csv_cache = None
 
@@ -46,9 +103,18 @@ class MyGraph:
         dataset = DATASETS[dataset_num]
         self._csv_cache = None
 
+        self.build_phase.value = PHASE_READING
+        self.managed_progress_value.value = 0.0
         self.graph = await run.cpu_bound(
-            method, dataset, self.managed_progress_value, win_size, t_step
+            build_ranked_graph,
+            method,
+            dataset,
+            self.managed_progress_value,
+            self.build_phase,
+            win_size,
+            t_step,
         )
+        self.build_phase.value = PHASE_IDLE
         self.current_set = (method_num, dataset_num, t_step, win_size)
 
     def create_egraph(self, num_top=20):

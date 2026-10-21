@@ -14,19 +14,19 @@ class DatasetSpec(NamedTuple):
 
 DATASETS: list[DatasetSpec] = [
     DatasetSpec(
-        "csv_data/data/bsky_vax_2024.csv",
+        "csv_data/bsky_vax_2024.csv",
         "createdAt",
         "authorProfile.handle",
         "text",
     ),
     DatasetSpec(
-        "csv_data/data/truth_vax_2024-2025.csv",
+        "csv_data/truth_vax_2024-2025_reduced.csv",
         "created_at",
         "account.username",
         "content_cleaned",
     ),
     DatasetSpec(
-        "csv_data/24010 Confirmed Russia Troll Tweets/toprowsremoved - confirmed_russia_troll_tweets.csv",
+        "csv_data/toprowsremoved - confirmed_russia_troll_tweets.csv",
         "Date tweet sent",
         "Twitter screenname",
         "Tweet text",
@@ -62,6 +62,15 @@ STEP_CONFIGURE = "Configure"
 STEP_BUILD = "Build graph"
 STEP_EXPLORE = "Explore network"
 STEP_INSPECT = "Compare users"
+
+# Explore's slider never asks for more than this many links.
+EXPLORE_MAX_PAIRS = 100
+
+# Build-graph phases reported by the background job. The page timer reads these.
+PHASE_IDLE = 0
+PHASE_READING = 1
+PHASE_BUILDING = 2
+PHASE_RANKING = 3
 
 # Delay before rebuilding charts so the stepper panel has a real layout size.
 STEP_SYNC_DELAY = 0.15

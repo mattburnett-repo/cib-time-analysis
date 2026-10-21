@@ -26,7 +26,13 @@ from modules.chart_utils import (
     resolve_node_ref,
     users_from_edge_payload,
 )
-from modules.my_graph import MyGraph, cut_graph_by_weight
+from modules.my_graph import (
+    TOP_EDGES_KEY,
+    MyGraph,
+    build_ranked_graph,
+    cut_graph_by_weight,
+    remember_top_edges,
+)
 
 
 def _weighted_graph():
@@ -68,6 +74,55 @@ def test_cut_graph_by_weight_keeps_all_when_num_top_exceeds_edges():
     cut = cut_graph_by_weight(original, num_top=100)
 
     assert cut.number_of_edges() == original.number_of_edges()
+
+
+def test_build_ranked_graph_reports_each_phase(sample_csv):
+    from app.time_analysis import sliding_window
+    from modules.timeseries_gui_config import (
+        PHASE_BUILDING,
+        PHASE_RANKING,
+        PHASE_READING,
+    )
+
+    class _Phase:
+        def __init__(self):
+            self.history = []
+            self._value = 0
+
+        @property
+        def value(self):
+            return self._value
+
+        @value.setter
+        def value(self, new):
+            self._value = new
+            self.history.append(new)
+
+    phase = _Phase()
+    progress = SimpleNamespace(value=0.0)
+    graph = build_ranked_graph(sliding_window, sample_csv, progress, phase, 2, 20)
+
+    assert phase.history == [PHASE_READING, PHASE_BUILDING, PHASE_RANKING]
+    assert TOP_EDGES_KEY in graph.graph
+    assert progress.value == 1.0
+
+
+def test_remember_top_edges_keeps_strongest_first():
+    graph = _weighted_graph()
+    remember_top_edges(graph, limit=2)
+
+    stored = graph.graph[TOP_EDGES_KEY]
+    assert [edge[2]["norm_weight"] for edge in stored] == [5.0, 3.0]
+
+
+def test_cut_graph_by_weight_uses_stored_top_edges():
+    graph = _weighted_graph()
+    graph.graph[TOP_EDGES_KEY] = [("c", "d", {"norm_weight": 0.5})]
+
+    cut = cut_graph_by_weight(graph, num_top=2)
+
+    assert cut.number_of_edges() == 1
+    assert set(cut.nodes) == {"c", "d"}
 
 
 def test_plot_subgraph_echart_series_shape():

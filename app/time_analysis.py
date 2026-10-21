@@ -1,3 +1,16 @@
+"""Posting-time similarity graphs.
+
+Action Driven Overlapping Window walks posts in time order. Each window is a
+slice that only moves forward, and a count of who is inside that slice is
+updated as posts enter and leave. That replaces a full-table scan per post.
+
+Time Overlap builds one timeline per account above the minimum post count.
+The timeline is binned at the configured time step: a bin is how many distinct
+seconds in that step had a post, the same result as ``get_tvec`` after it
+coarsens a per-second vector. Pair scores are one matrix product of those
+timelines after the same moving sum as ``np.convolve(..., mode="same")``.
+"""
+
 import time
 from collections.abc import Sequence
 from contextlib import contextmanager
@@ -7,23 +20,31 @@ import numpy as np
 import pandas as pd
 from dateutil import parser
 
-from modules.timeseries_gui_config import DatasetSpec
+from modules.timeseries_gui_config import PHASE_BUILDING, DatasetSpec
 
 DEFAULT_MIN_POSTS = 20
 MIN_OVERLAP = 1e-5
 PROGRESS_EVERY_N_POSTS = 100
 PROGRESS_EVERY_N_USERS = 10
+READ_PROGRESS_EVERY = 2000
 
 
-def read_csv(csv_name, time_col_name, user_col_name, content_col_name):
+def read_csv(csv_name, time_col_name, user_col_name, content_col_name, progress=None):
     csv_df = pd.read_csv(csv_name)
     csv_df = csv_df.dropna(subset=[user_col_name, time_col_name, content_col_name])
     time_data = []
+    n_rows = len(csv_df)
 
-    for row in csv_df[time_col_name]:
+    for i, row in enumerate(csv_df[time_col_name]):
         # use dateutil parser to convert date string into utc timestamp
         timestamp = time.mktime(parser.parse(row).timetuple())
         time_data.append(timestamp)
+        if (
+            progress is not None
+            and n_rows
+            and (i % READ_PROGRESS_EVERY == 0 or i + 1 == n_rows)
+        ):
+            progress.value = (i + 1) / n_rows
     time_data = np.array(time_data)
 
     # create a column with seconds relative to first post in the file
@@ -39,10 +60,14 @@ def _as_dataset(data_set: DatasetSpec | Sequence[str]) -> DatasetSpec:
     return DatasetSpec(*data_set)
 
 
-def _load_dataset(data_set: DatasetSpec | Sequence[str]):
+def _load_dataset(data_set: DatasetSpec | Sequence[str], progress=None, phase=None):
     """Normalize dataset config and load the CSV once for an analysis method."""
     dataset = _as_dataset(data_set)
-    csv_df, time_data = read_csv(*dataset)
+    csv_df, time_data = read_csv(*dataset, progress=progress)
+    if phase is not None:
+        phase.value = PHASE_BUILDING
+        if progress is not None:
+            progress.value = 0.0
     return dataset, csv_df, time_data
 
 
@@ -53,56 +78,49 @@ def _timed():
     print(f"Time taken: {time.time() - start_time:.2f} seconds")
 
 
-def _precompute_user_nodes(
-    graph: nx.Graph,
-    csv_df,
-    user_col_name: str,
-    *,
-    t_step: int,
-    min_posts: int,
-    progress,
-) -> list:
-    """Add nodes with precomputed tvecs; skip users below min_posts."""
-    users = np.unique(csv_df[user_col_name])
-    for iuser, user in enumerate(users):
-        if iuser % PROGRESS_EVERY_N_USERS == 0:
-            print(f"Processing user {iuser}/{len(users)}")
-            progress.value = iuser / len(users)
-        tvec, nump = get_tvec(user, csv_df, user_col_name, t_step)
-        if nump <= min_posts:
-            continue
-        graph.add_node(user, tvec=tvec, num_posts=nump)
-    return list(graph.nodes)
+def ado_window(data_set, managed_progress_value, win_size=2, t_step=60, phase=None):
+    """Score each post against the other accounts active in the following window.
 
-
-def ado_window(data_set, managed_progress_value, win_size=2, t_step=60):
-    dataset, csv_df, _time_data = _load_dataset(data_set)
+    ``left`` and ``right`` index the sorted posts. ``in_window`` holds how many
+    posts each account has between those indexes. Edge weight is that count;
+    norm_weight divides it by the number of posts in the slice.
+    """
+    dataset, csv_df, _time_data = _load_dataset(data_set, managed_progress_value, phase)
     user_col_name = dataset.user_col_name
     A = nx.Graph()
     dt = int(win_size * t_step)
+    # Posts are sorted by time. Each window is a slice that only moves forward.
+    times = csv_df["rel_timestamp"].to_numpy()
+    users = csv_df[user_col_name].to_numpy()
+    n_posts = len(times)
+    in_window: dict = {}
+    left = 0
+    right = 0
 
     with _timed():
-        for ipost in range(len(csv_df["rel_timestamp"])):
+        for ipost in range(n_posts):
             if ipost % PROGRESS_EVERY_N_POSTS == 0:
-                print(f"Processing post {ipost+1}/{len(csv_df['rel_timestamp'])}")
-                managed_progress_value.value = (ipost + 1) / len(
-                    csv_df["rel_timestamp"]
-                )
+                print(f"Processing post {ipost+1}/{n_posts}")
+                managed_progress_value.value = (ipost + 1) / n_posts
 
-            post_time = csv_df["rel_timestamp"].iloc[ipost]
-            user = csv_df[user_col_name].iloc[ipost]
+            post_time = times[ipost]
             stop = post_time + dt
-            data = csv_df[
-                (csv_df["rel_timestamp"] >= post_time)
-                & (csv_df["rel_timestamp"] <= stop)
-            ]
-            num_posts = data.shape[0]
-            win_users = np.unique(data[user_col_name])
+            while right < n_posts and times[right] <= stop:
+                arriving = users[right]
+                in_window[arriving] = in_window.get(arriving, 0) + 1
+                right += 1
+            while left < ipost and times[left] < post_time:
+                leaving = users[left]
+                in_window[leaving] -= 1
+                if in_window[leaving] == 0:
+                    del in_window[leaving]
+                left += 1
 
-            for other_user in win_users:
+            num_posts = right - left
+            user = users[ipost]
+            for other_user, w in in_window.items():
                 if other_user == user:
                     continue
-                w = len(data[data[user_col_name] == other_user])
                 if A.get_edge_data(user, other_user) is None:
                     A.add_edge(user, other_user, weight=w, norm_weight=w / num_posts)
                 else:
@@ -112,8 +130,8 @@ def ado_window(data_set, managed_progress_value, win_size=2, t_step=60):
     return A
 
 
-def sliding_window(data_set, managed_progress_value, win_size=2, t_step=60):
-    dataset, csv_df, _time_data = _load_dataset(data_set)
+def sliding_window(data_set, managed_progress_value, win_size=2, t_step=60, phase=None):
+    dataset, csv_df, _time_data = _load_dataset(data_set, managed_progress_value, phase)
     user_col_name = dataset.user_col_name
     G = nx.Graph()
     dt = int(win_size * t_step)
@@ -236,6 +254,12 @@ def get_user_content(user, csv_name, time_col_name, user_col_name, content_col_n
 
 
 def get_tvec(user, df, user_col_name, t_step=1):
+    """Activity vector for one account.
+
+    Marks each second that has a post, then sums those marks into bins of
+    ``t_step`` seconds. ``time_overlap`` matches this binning in
+    ``_activity_matrix`` and does not build this per-second vector per account.
+    """
     post_times = df[df[user_col_name] == user]["rel_timestamp"].to_numpy(dtype=int)
     num_posts = len(post_times)
     t_end = int(np.max(df["rel_timestamp"])) + 1
@@ -250,42 +274,102 @@ def get_tvec(user, df, user_col_name, t_step=1):
     return tvec, num_posts
 
 
+def _moving_sum_same(values: np.ndarray, window: int) -> np.ndarray:
+    """Match np.convolve(row, np.ones(window), mode='same') along the last axis."""
+    values = np.asarray(values, dtype=float)
+    if window <= 1:
+        return values.copy()
+    n_bins = values.shape[-1]
+    cumulative = np.empty(values.shape[:-1] + (n_bins + 1,), dtype=float)
+    cumulative[..., 0] = 0.0
+    np.cumsum(values, axis=-1, out=cumulative[..., 1:])
+    offset = (window - 1) // 2
+    index = np.arange(n_bins)
+    right = np.clip(index + offset + 1, 0, n_bins)
+    left = np.clip(index + offset + 1 - window, 0, n_bins)
+    return cumulative[..., right] - cumulative[..., left]
+
+
+def _activity_matrix(df, user_col_name, t_step, min_posts):
+    """Binned timelines for accounts with more than min_posts posts.
+
+    Counts posts once, then builds a vector only for accounts that will become
+    nodes. Each bin is ``t_step`` seconds and counts distinct seconds with a
+    post, matching ``get_tvec`` after coarsening.
+    """
+    if df.empty:
+        return [], np.empty((0, 0)), np.empty(0)
+    step = max(1, int(t_step))
+    t_end = int(np.max(df["rel_timestamp"])) + 1
+    n_bins = t_end if step == 1 else int(np.ceil(t_end / step))
+    counts = df.groupby(user_col_name, sort=True).size()
+    kept = counts[counts > min_posts]
+    grouped = df.groupby(user_col_name, sort=True)["rel_timestamp"]
+    names = []
+    rows = []
+    posts = []
+    for user, num_posts in kept.items():
+        seconds = np.unique(grouped.get_group(user).to_numpy(dtype=int))
+        if step == 1:
+            timeline = np.zeros(n_bins)
+            timeline[seconds] = 1.0
+        else:
+            timeline = np.bincount(seconds // step, minlength=n_bins).astype(float)
+        names.append(user)
+        rows.append(timeline)
+        posts.append(float(num_posts))
+    if not rows:
+        return [], np.empty((0, n_bins)), np.empty(0)
+    return names, np.vstack(rows), np.asarray(posts, dtype=float)
+
+
 def time_overlap(
     data_set,
     managed_progress_value,
     win_size=2,
     t_step=60,
     min_posts=DEFAULT_MIN_POSTS,
+    phase=None,
 ):
-    dataset, csv_df, _time_data = _load_dataset(data_set)
+    """Connect accounts whose binned activity overlaps.
+
+    Uses ``_activity_matrix`` for the timelines. Each batch of accounts is
+    smoothed with ``_moving_sum_same`` and multiplied by every timeline.
+    Weight and norm_weight are that score when it exceeds ``MIN_OVERLAP``.
+    """
+    dataset, csv_df, _time_data = _load_dataset(data_set, managed_progress_value, phase)
     user_col_name = dataset.user_col_name
     dt = int(win_size * t_step)
     H = nx.Graph()
-    win = np.ones(int(dt))
+    names, timelines, num_posts = _activity_matrix(
+        csv_df, user_col_name, t_step, min_posts
+    )
+    if not names:
+        managed_progress_value.value = 1.0
+        return H
+    H.add_nodes_from(names)
 
+    n_users = len(names)
+    chunk = 64
     with _timed():
-        users = _precompute_user_nodes(
-            H,
-            csv_df,
-            user_col_name,
-            t_step=t_step,
-            min_posts=min_posts,
-            progress=managed_progress_value,
-        )
-        for ii in range(len(users)):
-            if ii % PROGRESS_EVERY_N_USERS == 0:
-                print(f"Processing user {ii}/{len(users)}")
-                managed_progress_value.value = ii / len(users)
-            iuser = users[ii]
-            tvec = H.nodes[iuser]["tvec"]
-            nump = H.nodes[iuser]["num_posts"]
-            win_tvec = nump * np.convolve(tvec, win, mode="same")
-
-            for jj in range(ii + 1, len(users)):
-                juser = users[jj]
-                overlap = np.dot(win_tvec, H.nodes[juser]["tvec"])
-                if overlap > MIN_OVERLAP:
-                    H.add_edge(iuser, juser, weight=overlap, norm_weight=overlap)
+        for start in range(0, n_users, chunk):
+            stop = min(start + chunk, n_users)
+            print(f"Processing user {start}/{n_users}")
+            smoothed = num_posts[start:stop, None] * _moving_sum_same(
+                timelines[start:stop], dt
+            )
+            scores = smoothed @ timelines.T
+            for local, i in enumerate(range(start, stop)):
+                for j in range(i + 1, n_users):
+                    overlap = float(scores[local, j])
+                    if overlap > MIN_OVERLAP:
+                        H.add_edge(
+                            names[i],
+                            names[j],
+                            weight=overlap,
+                            norm_weight=overlap,
+                        )
+            managed_progress_value.value = stop / n_users
 
     return H
 

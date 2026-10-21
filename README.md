@@ -53,22 +53,15 @@ You need a GitHub account with Codespaces enabled.
 
 The app expects CSV files under `csv_data/` (see `modules/timeseries_gui_config.py`).
 
-**Truth Social Vax is not in the GitHub repo.**  
-`csv_data/data/truth_vax_2024-2025.csv` is about **129 MB**, which exceeds GitHub’s **100 MB** per-file limit, so pushes that include it are rejected. Keep that file on your machine (or obtain it from the project maintainers / your data source) and place it at:
-
-```text
-csv_data/data/truth_vax_2024-2025.csv
-```
-
-Without it, the **Truth Social Vax** dataset option will fail when you try to build a graph.
+**Truth Social Vax** reads `csv_data/truth_vax_2024-2025_reduced.csv` (post text cut to 200 characters). The full export, `csv_data/truth_vax_2024-2025.csv`, is gitignored and is not what the app reads.
 
 ## Layout
 
 | Path                               | Role                                                        |
 | ---------------------------------- | ----------------------------------------------------------- |
 | `app/time_gui_main.py`             | NiceGUI page: builds widgets and binds `StepperController`  |
-| `app/time_analysis.py`             | Core similarity / graph-building algorithms                 |
-| `modules/my_graph.py`              | Session graph holder (`MyGraph`) and weight cutting         |
+| `app/time_analysis.py`             | Similarity graphs. ADO walks a moving window; Time Overlap bins timelines and multiplies them. |
+| `modules/my_graph.py`              | Session graph. Build stores the strongest links; Explore slices that list. |
 | `modules/chart_utils.py`           | ECharts defaults, click JS, edge/node payload helpers       |
 | `modules/stepper.py`               | `StepperController` facade (nav / explore / compare mixins) |
 | `modules/stepper_nav.py`           | Configure→Build navigation and unlock rules                 |

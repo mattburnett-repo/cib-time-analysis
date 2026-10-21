@@ -1,4 +1,8 @@
-"""Explore network panel sync and edge selection for StepperController."""
+"""Explore network panel sync and edge selection for StepperController.
+
+The chart is the top of the link list stored on the graph during Build.
+Changing the slider slices that list again.
+"""
 
 from __future__ import annotations
 

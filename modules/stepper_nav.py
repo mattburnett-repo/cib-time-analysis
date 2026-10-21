@@ -1,4 +1,8 @@
-"""Build-step and stepper navigation helpers for StepperController."""
+"""Build-step and stepper navigation helpers for StepperController.
+
+Starting a build hides the status line and shows the three phase bars. The
+bars follow ``build_phase`` on the session graph, which the worker updates.
+"""
 
 from __future__ import annotations
 
@@ -65,6 +69,7 @@ class StepperNavMixin:
                 cfg.step_size.value,
                 cfg.win_size.value,
             )
+            build.status_label.visible = True
             if self.graph.current_set == pending:
                 build.status_label.set_text("Done. Ready to view results.")
                 build.create_button.disable()
@@ -77,6 +82,7 @@ class StepperNavMixin:
             self.unlock_after_build()
         else:
             build.intro_label.visible = True
+            build.status_label.visible = True
             build.status_label.set_text("Ready when you are.")
             build.create_button.enable()
             build.next_from_build.disable()
@@ -153,7 +159,10 @@ class StepperNavMixin:
         build = self.panels.build
         build.create_button.disable()
         build.progress.visible = True
-        build.status_label.set_text("Building graph…")
+        build.status_label.visible = False
+        build.read_progress.set_value(0)
+        build.graph_progress.set_value(0)
+        build.links_progress.set_value(0)
         await self.graph.create_graph(
             cfg.toggle_analysis.value,
             cfg.toggle_data.value,
@@ -162,6 +171,7 @@ class StepperNavMixin:
         )
         build.progress.visible = False
         build.intro_label.visible = False
+        build.status_label.visible = True
         build.status_label.set_text("Done. Ready to view results.")
 
         self.panels.explore.slider.enable()

@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import networkx as nx
 import numpy as np
 import pytest
@@ -35,6 +37,11 @@ def test_read_csv_adds_relative_timestamps_and_sorts(sample_csv):
     assert "rel_timestamp" in csv_df.columns
     assert csv_df["rel_timestamp"].iloc[0] == 0
     assert list(csv_df["rel_timestamp"]) == sorted(csv_df["rel_timestamp"])
+
+
+def test_read_csv_reports_progress(sample_csv, progress):
+    time_analysis.read_csv(*sample_csv, progress=progress)
+    assert progress.value == 1.0
 
 
 def test_read_csv_drops_incomplete_rows(tmp_path):
@@ -161,8 +168,35 @@ def test_ado_window_builds_edges(sample_csv, progress):
     graph = time_analysis.ado_window(sample_csv, progress, win_size=2, t_step=20)
 
     assert isinstance(graph, nx.Graph)
-    assert graph.number_of_edges() >= 1
+    assert graph.edges["alice", "bob"]["weight"] == 3
+    assert graph.edges["alice", "bob"]["norm_weight"] == pytest.approx(1.0)
+    assert graph.edges["alice", "carol"]["weight"] == 1
+    assert graph.edges["alice", "carol"]["norm_weight"] == pytest.approx(1 / 3)
+    assert graph.edges["bob", "carol"]["weight"] == 3
+    assert graph.edges["bob", "carol"]["norm_weight"] == pytest.approx(4 / 3)
     assert progress.value > 0
+
+
+def _reference_time_overlap(sample_csv, win_size, t_step, min_posts):
+    """Pairwise scores from get_tvec, the definition time_overlap must match."""
+    csv_df, _time_data = time_analysis.read_csv(*sample_csv)
+    user_col = sample_csv.user_col_name
+    dt = int(win_size * t_step)
+    window = np.ones(dt)
+    kept = []
+    for user in np.unique(csv_df[user_col]):
+        tvec, num_posts = time_analysis.get_tvec(user, csv_df, user_col, t_step)
+        if num_posts <= min_posts:
+            continue
+        kept.append((user, num_posts, tvec))
+    expected = {}
+    for i, (user, num_posts, tvec) in enumerate(kept):
+        smoothed = num_posts * np.convolve(tvec, window, mode="same")
+        for other, _other_posts, other_tvec in kept[i + 1 :]:
+            overlap = float(np.dot(smoothed, other_tvec))
+            if overlap > time_analysis.MIN_OVERLAP:
+                expected[tuple(sorted((user, other)))] = overlap
+    return {user for user, _num_posts, _tvec in kept}, expected
 
 
 def test_time_overlap_with_low_min_posts(sample_csv, progress):
@@ -174,3 +208,29 @@ def test_time_overlap_with_low_min_posts(sample_csv, progress):
     assert isinstance(graph, nx.Graph)
     assert set(graph.nodes) == {"alice", "bob", "carol"}
     assert graph.number_of_edges() >= 1
+
+
+@pytest.mark.parametrize("t_step", [1, 20])
+def test_time_overlap_matches_pairwise_scores(tmp_path, progress, t_step):
+    # Span is long enough that the binned timeline is longer than the window.
+    lines = ["created_at,account.username,content_cleaned"]
+    start = datetime(2024, 1, 1)
+    accounts = ("alice", "bob", "carol")
+    for i, seconds in enumerate(range(0, 4000, 25)):
+        stamp = (start + timedelta(seconds=seconds)).strftime("%Y-%m-%d %H:%M:%S")
+        lines.append(f"{stamp},{accounts[i % 3]},post{i}")
+    path = tmp_path / "long.csv"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    spec = DatasetSpec(str(path), "created_at", "account.username", "content_cleaned")
+    win_size = 6
+    min_posts = 1
+    graph = time_analysis.time_overlap(
+        spec, progress, win_size=win_size, t_step=t_step, min_posts=min_posts
+    )
+    users, expected = _reference_time_overlap(spec, win_size, t_step, min_posts)
+
+    assert set(graph.nodes) == users
+    assert graph.number_of_edges() == len(expected)
+    for (user, other), overlap in expected.items():
+        assert graph.edges[user, other]["weight"] == pytest.approx(overlap)
+        assert graph.edges[user, other]["norm_weight"] == pytest.approx(overlap)
