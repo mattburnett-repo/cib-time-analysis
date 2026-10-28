@@ -89,4 +89,3 @@ Covers `time_analysis`, chart/graph helpers, `StepperController` (mocked UI), an
 - Modify edges to indicate frequency of overlapping posts. Current the graphs only display overlap, without any indication of how many overlapping posts exist between two nodes.
 - Bring this repo's code structure / organization in line with the existing analyzer / test modules in the CIBMT repo.
 - Use Kartik's CSS abstractions instead of literal Tailwind classes.
-- Create slidedeck per Kris's suggestion, using [this](https://civictechdc.github.io/cib-mango-tree/guides/contributing/new_contributor_guide/#designing-a-test) as a guide.
