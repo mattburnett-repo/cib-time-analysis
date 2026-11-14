@@ -4,6 +4,8 @@ Local NiceGUI app for building and inspecting user networks from posting-time da
 
 This project is based on time analysis code authored by [John Biddle](https://github.com/johnbiddle). It is primarily UI enhancements, based on John's work.
 
+===> The code in this repo has been ported to the main CIBMT repo via CIBMT [PR #443](https://github.com/civictechdc/cib-mango-tree/pull/443)
+
 ## Clone
 
 ```bash
